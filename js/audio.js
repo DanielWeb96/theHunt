@@ -1,5 +1,5 @@
 // ============================================================================
-// PROCEDURAL AUDIO ENGINE - APOCALYPTIC ZOMBIE WARFARE (Web Audio API)
+// RETRO 16-BIT AUDIO SYNTHESIZER (Web Audio API)
 // ============================================================================
 
 class SoundFX {
@@ -41,13 +41,30 @@ class SoundFX {
     } catch (e) {}
   }
 
-  shootSentry() {
-    // Sharp metallic crack of a minigun burst
-    this.playTone(320 + Math.random() * 80, "sawtooth", 0.05, 0.12);
+  shootAssault() {
+    this.playTone(340 + Math.random() * 60, "sawtooth", 0.06, 0.1);
   }
 
-  shootFlame() {
-    // Roar of napalm
+  shootSniper() {
+    this.playTone(550, "square", 0.18, 0.22);
+    setTimeout(() => this.playTone(180, "sawtooth", 0.15, 0.12), 40);
+  }
+
+  shootShotgun() {
+    this.playTone(160, "sawtooth", 0.14, 0.25);
+    setTimeout(() => this.playTone(80, "triangle", 0.1, 0.2), 30);
+  }
+
+  shootSMG() {
+    this.playTone(480 + Math.random() * 80, "square", 0.04, 0.07);
+  }
+
+  reload() {
+    this.playTone(500, "sine", 0.05, 0.08);
+    setTimeout(() => this.playTone(700, "sine", 0.08, 0.1), 120);
+  }
+
+  grenadeExplode() {
     if (!this.ctx || this.muted) return;
     try {
       const osc = this.ctx.createOscillator();
@@ -55,105 +72,76 @@ class SoundFX {
       const now = this.ctx.currentTime;
 
       osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(90, now);
-      osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
-
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.3);
-    } catch (e) {}
-  }
-
-  shootCryo() {
-    this.playTone(740, "sine", 0.14, 0.08);
-  }
-
-  shootRocket() {
-    this.playTone(180, "sawtooth", 0.18, 0.2);
-  }
-
-  rocketExplosion() {
-    if (!this.ctx || this.muted) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      const now = this.ctx.currentTime;
-
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(120, now);
-      osc.frequency.exponentialRampToValueAtTime(25, now + 0.45);
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.exponentialRampToValueAtTime(20, now + 0.5);
 
       gain.gain.setValueAtTime(0.35, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
 
       osc.start(now);
-      osc.stop(now + 0.45);
+      osc.stop(now + 0.5);
     } catch (e) {}
+  }
+
+  deployTurret() {
+    this.playTone(400, "square", 0.06, 0.1);
+    setTimeout(() => this.playTone(600, "square", 0.08, 0.1), 80);
+    setTimeout(() => this.playTone(800, "sine", 0.1, 0.1), 160);
+  }
+
+  heal() {
+    this.playTone(440, "sine", 0.1, 0.15);
+    setTimeout(() => this.playTone(660, "sine", 0.12, 0.15), 90);
+    setTimeout(() => this.playTone(880, "sine", 0.18, 0.15), 180);
   }
 
   zombieGroan() {
-    // Low zombie growl
-    if (!this.ctx || this.muted || Math.random() > 0.4) return;
+    if (!this.ctx || this.muted || Math.random() > 0.3) return;
     try {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       const now = this.ctx.currentTime;
 
       osc.type = "sawtooth";
-      const startF = 90 + Math.random() * 30;
-      osc.frequency.setValueAtTime(startF, now);
-      osc.frequency.linearRampToValueAtTime(startF - 35, now + 0.4);
+      const f = 85 + Math.random() * 25;
+      osc.frequency.setValueAtTime(f, now);
+      osc.frequency.linearRampToValueAtTime(f - 30, now + 0.35);
 
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      gain.gain.setValueAtTime(0.07, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
 
       osc.start(now);
-      osc.stop(now + 0.4);
+      osc.stop(now + 0.35);
     } catch (e) {}
   }
 
+  zombieHit() {
+    this.playTone(220, "triangle", 0.05, 0.08);
+  }
+
   zombieDeath() {
-    this.playTone(180, "triangle", 0.08, 0.1);
+    this.playTone(130, "sawtooth", 0.08, 0.09);
   }
 
-  buildTurret() {
-    this.playTone(450, "square", 0.07, 0.12);
-    setTimeout(() => this.playTone(600, "square", 0.1, 0.12), 70);
-  }
-
-  upgradeTurret() {
-    this.playTone(550, "sine", 0.08, 0.12);
-    setTimeout(() => this.playTone(850, "sine", 0.14, 0.14), 70);
-  }
-
-  dismantle() {
-    this.playTone(280, "sine", 0.1, 0.1);
+  playerHurt() {
+    this.playTone(120, "sawtooth", 0.18, 0.25);
   }
 
   waveStart() {
-    // Air raid siren tone
-    this.playTone(380, "sawtooth", 0.25, 0.2);
-    setTimeout(() => this.playTone(540, "sawtooth", 0.4, 0.22), 220);
-  }
-
-  bunkerBreach() {
-    this.playTone(100, "sawtooth", 0.35, 0.3);
+    this.playTone(300, "sawtooth", 0.2, 0.2);
+    setTimeout(() => this.playTone(450, "sawtooth", 0.3, 0.2), 160);
+    setTimeout(() => this.playTone(600, "sawtooth", 0.45, 0.25), 320);
   }
 
   defeat() {
-    this.playTone(240, "sawtooth", 0.5, 0.3);
-    setTimeout(() => this.playTone(140, "sawtooth", 0.7, 0.3), 350);
+    this.playTone(240, "sawtooth", 0.4, 0.3);
+    setTimeout(() => this.playTone(160, "sawtooth", 0.6, 0.3), 300);
   }
 }
 

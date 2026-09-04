@@ -1,125 +1,172 @@
 // ============================================================================
-// 3D ZOMBIE DEFENSE - CONFIGURATION & BALANCING
+// PIXEL ART URBAN ZOMBIE SURVIVAL - CONFIGURATION
 // ============================================================================
 
 export const CONFIG = {
-  // --------------------------------------------------------------------------
-  // ACCESS PASSWORD (Your chosen custom password)
-  // --------------------------------------------------------------------------
   DEFAULT_PASSWORD: "dakustowerGame69",
   PASSWORD_LENGTH: 16,
 
-  // --------------------------------------------------------------------------
-  // GAMEPLAY & BUNKER BALANCING
-  // --------------------------------------------------------------------------
-  BUNKER_HEALTH: 25,
-  STARTING_SCRAP: 180, // Gold / Currency renamed to "Scrap"
-  COOP_BOUNTY_SHARE_RATIO: 0.5,
-
-  // 3D Grid dimensions (18x12 tiles, each tile is 4 units in Three.js)
-  GRID: {
-    COLS: 18,
-    ROWS: 12,
-    TILE_SIZE: 4
+  // Big Map World Dimensions (in pixels)
+  WORLD: {
+    WIDTH: 2048,
+    HEIGHT: 2048,
+    SAFE_ZONE_RADIUS: 160
   },
 
   // --------------------------------------------------------------------------
-  // ANTI-ZOMBIE TURRETS (3D WEAPONS)
+  // 5 PLAYABLE CHARACTER CLASSES
   // --------------------------------------------------------------------------
-  TURRETS: {
-    sentry: {
-      name: "Sentry Minigun",
-      cost: 65,
-      range: 15,
-      damage: 16,
-      fireRate: 0.25, // 4 shots/sec
-      bulletSpeed: 38,
-      color: "#f59e0b",
-      bulletColor: "#fbbf24",
-      icon: "🔫",
-      desc: "Rapid-fire twin rotary barrels shredding individual zombies."
+  CHARACTERS: {
+    commando: {
+      id: "commando",
+      name: "Jack 'Viper' Vance",
+      title: "Assault Commando",
+      portrait: "assets/char_commando.jpg",
+      hp: 120,
+      speed: 3.6,
+      weapon: "M4A1 Assault Rifle",
+      damage: 24,
+      fireRate: 0.12, // rapid fire
+      magSize: 30,
+      reloadTime: 1.4,
+      spread: 0.08,
+      bulletSpeed: 14,
+      color: "#22c55e",
+      ability: "Frag Grenade (Area Explosive)",
+      abilityCooldown: 8,
+      desc: "Balanced combat soldier with high-capacity assault rifle and explosive grenades."
     },
-    flamethrower: {
-      name: "Incinerator",
-      cost: 115,
-      range: 12,
-      damage: 32,
-      fireRate: 0.6,
-      splashRadius: 6,
+    sniper: {
+      id: "sniper",
+      name: "Cole 'Ghost' Walker",
+      title: "Recon Sniper",
+      portrait: "assets/char_sniper.jpg",
+      hp: 85,
+      speed: 3.4,
+      weapon: "Barrett .50 Cal",
+      damage: 125,
+      fireRate: 0.9,
+      magSize: 6,
+      reloadTime: 2.2,
+      spread: 0.01,
       bulletSpeed: 22,
-      color: "#ef4444",
-      bulletColor: "#f97316",
-      icon: "🔥",
-      desc: "Blasts pressurized napalm, igniting clusters of walking corpses."
+      piercing: 3, // shots pass through up to 3 zombies
+      color: "#38bdf8",
+      ability: "Piercing Overcharge (Laser beam)",
+      abilityCooldown: 10,
+      desc: "Long-range marksman capable of piercing through multiple zombies with immense damage."
     },
-    cryo: {
-      name: "Cryo Pylon",
-      cost: 90,
-      range: 13,
-      damage: 8,
-      fireRate: 0.75,
-      slowFactor: 0.45, // slows zombie to 45% speed
-      slowDuration: 2.8,
-      bulletSpeed: 28,
-      color: "#06b6d4",
-      bulletColor: "#67e8f9",
-      icon: "❄️",
-      desc: "Sub-zero liquid nitrogen emitter chilling and freezing the horde."
+    medic: {
+      id: "medic",
+      name: "Dr. Elena Rostova",
+      title: "Combat Field Medic",
+      portrait: "assets/char_medic.jpg",
+      hp: 100,
+      speed: 4.1,
+      weapon: "Dual Vector SMGs",
+      damage: 16,
+      fireRate: 0.09,
+      magSize: 36,
+      reloadTime: 1.2,
+      spread: 0.14,
+      bulletSpeed: 13,
+      color: "#f43f5e",
+      ability: "Field Medkit Drop (Heals 50 HP for team)",
+      abilityCooldown: 12,
+      desc: "High mobility healer who sprays bullets and drops medical kits for team survival."
     },
-    rocket: {
-      name: "Missile Silo",
-      cost: 175,
-      range: 18,
-      damage: 75,
-      fireRate: 1.6,
-      splashRadius: 7.5,
-      bulletSpeed: 20,
-      color: "#8b5cf6",
-      bulletColor: "#c084fc",
-      icon: "🚀",
-      desc: "Heavy guided cluster rockets obliterating high-threat mutants."
+    heavy: {
+      id: "heavy",
+      name: "Marcus 'Anvil' Kane",
+      title: "Blast Demolitionist",
+      portrait: "assets/char_heavy.jpg",
+      hp: 160,
+      speed: 3.0,
+      weapon: "SPAS-12 Combat Shotgun",
+      damage: 18, // per pellet (6 pellets per blast)
+      pellets: 6,
+      fireRate: 0.65,
+      magSize: 8,
+      reloadTime: 1.8,
+      spread: 0.22,
+      bulletSpeed: 12,
+      knockback: 6,
+      color: "#f59e0b",
+      ability: "Sticky C4 Satchel (Massive blast)",
+      abilityCooldown: 11,
+      desc: "Heavily armored juggernaut devastating close-quarters crowds with shotgun spread."
+    },
+    engineer: {
+      id: "engineer",
+      name: "Hank 'Spanner' Miller",
+      title: "Combat Engineer",
+      portrait: "assets/char_engineer.jpg",
+      hp: 105,
+      speed: 3.3,
+      weapon: "Riot Carbine & Wrench",
+      damage: 20,
+      fireRate: 0.22,
+      magSize: 20,
+      reloadTime: 1.3,
+      spread: 0.09,
+      bulletSpeed: 13,
+      color: "#a855f7",
+      ability: "Deploy Automated Sentry Turret",
+      abilityCooldown: 15,
+      desc: "Tech specialist who deploys automated defensive sentry guns and fortifies positions."
     }
   },
 
   // --------------------------------------------------------------------------
-  // ZOMBIE MUTATIONS (ENEMIES)
+  // ZOMBIE MUTATIONS
   // --------------------------------------------------------------------------
   ZOMBIES: {
     walker: {
-      name: "Decayed Shambler",
-      hp: 60,
-      speed: 1.2,
-      reward: 14,
-      color: "#4ade80",
-      bodyColor: "#335c3d",
-      scale: 1.0
-    },
-    runner: {
-      name: "Infected Sprinter",
+      name: "City Shambler",
       hp: 40,
-      speed: 2.6,
-      reward: 18,
-      color: "#f87171",
-      bodyColor: "#7f1d1d",
-      scale: 0.85
+      speed: 1.5,
+      damage: 10,
+      score: 15,
+      color: "#4ade80",
+      radius: 12
     },
-    brute: {
-      name: "Armored Juggernaut",
-      hp: 340,
-      speed: 0.75,
-      reward: 45,
-      color: "#94a3b8",
-      bodyColor: "#334155",
-      scale: 1.5
+    sprinter: {
+      name: "Infected Sprinter",
+      hp: 28,
+      speed: 3.2,
+      damage: 8,
+      score: 20,
+      color: "#ef4444",
+      radius: 10
+    },
+    bloater: {
+      name: "Toxic Bloater",
+      hp: 90,
+      speed: 1.0,
+      damage: 25,
+      score: 40,
+      color: "#84cc16",
+      radius: 18,
+      explodesOnDeath: true
+    },
+    juggernaut: {
+      name: "Mutant Brute",
+      hp: 280,
+      speed: 0.9,
+      damage: 30,
+      score: 85,
+      color: "#64748b",
+      radius: 22
     },
     titan: {
-      name: "Goliath Abomination",
-      hp: 1200,
-      speed: 0.55,
-      reward: 160,
+      name: "Goliath Titan",
+      hp: 1100,
+      speed: 0.75,
+      damage: 50,
+      score: 300,
       color: "#c084fc",
-      bodyColor: "#581c87",
-      scale: 2.2
+      radius: 32,
+      isBoss: true
     }
   }
 };
