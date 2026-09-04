@@ -118,6 +118,66 @@
         <button id="solo-btn" class="btn-secondary">🛡️ Play Solo</button>
       </div>
 
+      <!-- Lobby Audio & Soundtrack Settings Bar -->
+      <div class="lobby-audio-bar">
+        <div class="lobby-audio-header">
+          <div class="lobby-audio-title-group">
+            <span class="audio-icon-badge">🎧</span>
+            <div>
+              <span class="lobby-audio-title">Audio & 16-Bit Soundtrack</span>
+              <span class="lobby-audio-desc">Synthesized retro synthwave & combat SFX</span>
+            </div>
+          </div>
+          <div class="lobby-audio-quick-btns">
+            <button id="lobby-play-music-btn" class="btn-audio-pill" title="Preview Soundtrack">▶ Play Music</button>
+            <button id="lobby-mute-btn" class="btn-audio-pill" title="Toggle Mute">🔊 Sound ON</button>
+          </div>
+        </div>
+
+        <div class="lobby-audio-controls">
+          <!-- Master Volume Slider -->
+          <div class="audio-slider-group">
+            <div class="audio-slider-label">
+              <span>Master</span>
+              <strong id="lobby-master-vol-txt">80%</strong>
+            </div>
+            <input type="range" id="lobby-master-vol" min="0" max="100" value="80" class="audio-slider">
+          </div>
+
+          <!-- Music Volume Slider -->
+          <div class="audio-slider-group">
+            <div class="audio-slider-label">
+              <span>Music</span>
+              <strong id="lobby-music-vol-txt">65%</strong>
+            </div>
+            <input type="range" id="lobby-music-vol" min="0" max="100" value="65" class="audio-slider">
+          </div>
+
+          <!-- SFX Volume Slider -->
+          <div class="audio-slider-group">
+            <div class="audio-slider-label">
+              <span>SFX</span>
+              <strong id="lobby-sfx-vol-txt">80%</strong>
+            </div>
+            <input type="range" id="lobby-sfx-vol" min="0" max="100" value="80" class="audio-slider">
+          </div>
+
+          <!-- Track Selector -->
+          <div class="audio-track-group">
+            <div class="audio-slider-label">
+              <span>Track Theme</span>
+            </div>
+            <select id="lobby-track-select" class="audio-select">
+              <option value="dynamic">⚡ Dynamic (Adapts to Waves)</option>
+              <option value="overdrive">💀 Dead Zone Overdrive (Action)</option>
+              <option value="nightfall">🌙 Nightfall Outpost (Suspense)</option>
+              <option value="quarantine">⚡ Neon Quarantine (Cyberpunk)</option>
+              <option value="off">⏹ Music Off</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div id="lobby-error" class="error-message"></div>
     </div>
   </div>
@@ -186,6 +246,7 @@
       <div class="hud-session-box">
         <div class="hud-score-row">
           <span>⭐ <strong id="stat-score">0</strong> pts</span>
+          <button id="hud-audio-btn" class="btn-icon" title="Audio Settings [O]">🔊</button>
           <button id="fullscreen-btn" class="btn-icon" title="Toggle Fullscreen">⛶</button>
         </div>
         <div id="room-info" class="room-badge hidden">
@@ -193,6 +254,62 @@
           <button id="copy-room-btn" class="copy-btn" title="Copy join link">Copy</button>
         </div>
         <div id="player-chips" class="player-chips"></div>
+      </div>
+    </div>
+
+    <!-- In-Game Tactical Audio Settings Drawer / Modal -->
+    <div id="in-game-audio-modal" class="in-game-audio-panel hidden">
+      <div class="in-game-audio-header">
+        <span class="in-game-audio-title">🔊 Audio & Retro Soundtrack</span>
+        <button id="close-audio-modal-btn" class="btn-close-modal" title="Close [O] / [Esc]">✕</button>
+      </div>
+
+      <div class="in-game-audio-content">
+        <!-- Master Volume -->
+        <div class="audio-slider-group">
+          <div class="audio-slider-label">
+            <span>Master Volume</span>
+            <strong id="hud-master-vol-txt">80%</strong>
+          </div>
+          <input type="range" id="hud-master-vol" min="0" max="100" value="80" class="audio-slider">
+        </div>
+
+        <!-- Music Volume -->
+        <div class="audio-slider-group">
+          <div class="audio-slider-label">
+            <span>Soundtrack (Music)</span>
+            <strong id="hud-music-vol-txt">65%</strong>
+          </div>
+          <input type="range" id="hud-music-vol" min="0" max="100" value="65" class="audio-slider">
+        </div>
+
+        <!-- SFX Volume -->
+        <div class="audio-slider-group">
+          <div class="audio-slider-label">
+            <span>Sound Effects (SFX)</span>
+            <strong id="hud-sfx-vol-txt">80%</strong>
+          </div>
+          <input type="range" id="hud-sfx-vol" min="0" max="100" value="80" class="audio-slider">
+        </div>
+
+        <!-- Track Selector -->
+        <div class="audio-slider-group">
+          <div class="audio-slider-label">
+            <span>Track Theme</span>
+          </div>
+          <select id="hud-track-select" class="audio-select">
+            <option value="dynamic">⚡ Dynamic (Adapts to Waves)</option>
+            <option value="overdrive">💀 Dead Zone Overdrive (Action)</option>
+            <option value="nightfall">🌙 Nightfall Outpost (Suspense)</option>
+            <option value="quarantine">⚡ Neon Quarantine (Cyberpunk)</option>
+            <option value="off">⏹ Music Off</option>
+          </select>
+        </div>
+
+        <div class="in-game-audio-actions">
+          <button id="hud-mute-btn" class="btn-audio-pill">🔊 Sound ON</button>
+          <span class="audio-shortcut-hint"><code>[M]</code> Mute &nbsp;•&nbsp; <code>[O]</code> Audio</span>
+        </div>
       </div>
     </div>
 
@@ -216,7 +333,7 @@
     <!-- Bottom-Center Controls Guide -->
     <div class="hud-floating hud-bottom-center">
       <div class="hud-guide-pill">
-        <code>[WASD]</code> Move &nbsp;•&nbsp; <code>[Left Click]</code> Shoot &nbsp;•&nbsp; <code>[R]</code> Reload &nbsp;•&nbsp; <code>[Space]</code> Ability &nbsp;•&nbsp; <code>[H]</code> Hitboxes
+        <code>[WASD]</code> Move &nbsp;•&nbsp; <code>[Left Click]</code> Shoot &nbsp;•&nbsp; <code>[R]</code> Reload &nbsp;•&nbsp; <code>[Space]</code> Ability &nbsp;•&nbsp; <code>[M]</code> Mute &nbsp;•&nbsp; <code>[O]</code> Audio &nbsp;•&nbsp; <code>[H]</code> Hitboxes
       </div>
     </div>
   </div>

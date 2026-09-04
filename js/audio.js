@@ -1,11 +1,28 @@
 // ============================================================================
-// RETRO 16-BIT AUDIO SYNTHESIZER (Web Audio API)
+// RETRO 16-BIT AUDIO SYNTHESIZER & SOUNDTRACK MANAGER (Web Audio API)
 // ============================================================================
+
+import { SoundtrackEngine } from "./soundtrack.js";
 
 class SoundFX {
   constructor() {
     this.ctx = null;
+    this.masterGain = null;
+    this.sfxGain = null;
+    this.musicGain = null;
+    this.soundtrack = null;
+
+    // Volume levels (0.0 to 1.0)
+    this.masterVolume = 0.8;
+    this.musicVolume = 0.65;
+    this.sfxVolume = 0.8;
     this.muted = false;
+
+    // Listeners for audio UI updates
+    this.listeners = [];
+
+    // Load persisted settings
+    this.loadSettings();
   }
 
   init() {
@@ -13,13 +30,160 @@ class SoundFX {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
+
+        // 1. Master Gain Node
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.setValueAtTime(this.muted ? 0 : this.masterVolume, this.ctx.currentTime);
+        this.masterGain.connect(this.ctx.destination);
+
+        // 2. SFX Gain Node
+        this.sfxGain = this.ctx.createGain();
+        this.sfxGain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
+        this.sfxGain.connect(this.masterGain);
+
+        // 3. Music Gain Node
+        this.musicGain = this.ctx.createGain();
+        this.musicGain.gain.setValueAtTime(this.musicVolume, this.ctx.currentTime);
+        this.musicGain.connect(this.masterGain);
+
+        // 4. Procedural Soundtrack Engine
+        this.soundtrack = new SoundtrackEngine(this.ctx, this.musicGain);
+        this.soundtrack.init();
       }
     }
+
     if (this.ctx && this.ctx.state === "suspended") {
       this.ctx.resume();
     }
   }
 
+  // --------------------------------------------------------------------------
+  // VOLUME & MUTE CONTROLS
+  // --------------------------------------------------------------------------
+  setMasterVolume(val) {
+    this.masterVolume = Math.max(0, Math.min(1, parseFloat(val)));
+    if (this.ctx && this.masterGain && !this.muted) {
+      this.masterGain.gain.setValueAtTime(this.masterVolume, this.ctx.currentTime);
+    }
+    this.saveSettings();
+    this.notifyListeners();
+  }
+
+  setMusicVolume(val) {
+    this.musicVolume = Math.max(0, Math.min(1, parseFloat(val)));
+    if (this.ctx && this.musicGain) {
+      this.musicGain.gain.setValueAtTime(this.musicVolume, this.ctx.currentTime);
+    }
+    this.saveSettings();
+    this.notifyListeners();
+  }
+
+  setSfxVolume(val) {
+    this.sfxVolume = Math.max(0, Math.min(1, parseFloat(val)));
+    if (this.ctx && this.sfxGain) {
+      this.sfxGain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
+    }
+    this.saveSettings();
+    this.notifyListeners();
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    if (this.ctx && this.masterGain) {
+      const target = this.muted ? 0 : this.masterVolume;
+      this.masterGain.gain.setValueAtTime(target, this.ctx.currentTime);
+    }
+    this.saveSettings();
+    this.notifyListeners();
+    return this.muted;
+  }
+
+  isMuted() {
+    return this.muted;
+  }
+
+  saveSettings() {
+    try {
+      const data = {
+        master: this.masterVolume,
+        music: this.musicVolume,
+        sfx: this.sfxVolume,
+        muted: this.muted,
+        track: this.soundtrack ? this.soundtrack.currentTrack : "dynamic"
+      };
+      localStorage.setItem("deadzone_audio_settings", JSON.stringify(data));
+    } catch (e) {}
+  }
+
+  loadSettings() {
+    try {
+      const saved = localStorage.getItem("deadzone_audio_settings");
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (typeof data.master === "number") this.masterVolume = data.master;
+        if (typeof data.music === "number") this.musicVolume = data.music;
+        if (typeof data.sfx === "number") this.sfxVolume = data.sfx;
+        if (typeof data.muted === "boolean") this.muted = data.muted;
+        this.initialTrack = data.track || "dynamic";
+      }
+    } catch (e) {}
+  }
+
+  onSettingsChanged(cb) {
+    this.listeners.push(cb);
+  }
+
+  notifyListeners() {
+    for (const cb of this.listeners) {
+      try { cb(); } catch (e) {}
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // SOUNDTRACK PLAYBACK & DYNAMIC INTENSITY
+  // --------------------------------------------------------------------------
+  startMusic(trackKey = null) {
+    this.init();
+    if (!this.soundtrack) return;
+    const track = trackKey || this.initialTrack || "dynamic";
+    this.soundtrack.start(track);
+    this.saveSettings();
+    this.notifyListeners();
+  }
+
+  stopMusic() {
+    if (this.soundtrack) {
+      this.soundtrack.stop();
+      this.notifyListeners();
+    }
+  }
+
+  setMusicTrack(trackKey) {
+    this.init();
+    if (this.soundtrack) {
+      this.soundtrack.setTrack(trackKey);
+      this.saveSettings();
+      this.notifyListeners();
+    }
+  }
+
+  setCombatIntensity(level) {
+    if (this.soundtrack) {
+      this.soundtrack.setIntensity(level);
+    }
+  }
+
+  isMusicPlaying() {
+    return this.soundtrack ? this.soundtrack.isPlaying : false;
+  }
+
+  getCurrentTrack() {
+    return this.soundtrack ? this.soundtrack.currentTrack : (this.initialTrack || "dynamic");
+  }
+
+  // --------------------------------------------------------------------------
+  // SOUND EFFECTS (SFX) SYNTHESIS
+  // --------------------------------------------------------------------------
   playTone(freq, type, duration, gainStart = 0.15, gainEnd = 0.001) {
     if (!this.ctx || this.muted) return;
     try {
@@ -34,7 +198,7 @@ class SoundFX {
       gain.gain.exponentialRampToValueAtTime(gainEnd, now + duration);
 
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(this.sfxGain || this.masterGain || this.ctx.destination);
 
       osc.start(now);
       osc.stop(now + duration);
@@ -79,7 +243,7 @@ class SoundFX {
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
 
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(this.sfxGain || this.masterGain || this.ctx.destination);
 
       osc.start(now);
       osc.stop(now + 0.5);
@@ -114,7 +278,7 @@ class SoundFX {
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
 
       osc.connect(gain);
-      gain.connect(this.ctx.destination);
+      gain.connect(this.sfxGain || this.masterGain || this.ctx.destination);
 
       osc.start(now);
       osc.stop(now + 0.35);

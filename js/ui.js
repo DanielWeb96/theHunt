@@ -53,12 +53,37 @@ const gameOverTitle = document.getElementById("game-over-title");
 const gameOverMsg = document.getElementById("game-over-msg");
 const restartGameBtn = document.getElementById("restart-game-btn");
 
+// Lobby Audio Controls
+const lobbyPlayMusicBtn = document.getElementById("lobby-play-music-btn");
+const lobbyMuteBtn = document.getElementById("lobby-mute-btn");
+const lobbyMasterVol = document.getElementById("lobby-master-vol");
+const lobbyMasterVolTxt = document.getElementById("lobby-master-vol-txt");
+const lobbyMusicVol = document.getElementById("lobby-music-vol");
+const lobbyMusicVolTxt = document.getElementById("lobby-music-vol-txt");
+const lobbySfxVol = document.getElementById("lobby-sfx-vol");
+const lobbySfxVolTxt = document.getElementById("lobby-sfx-vol-txt");
+const lobbyTrackSelect = document.getElementById("lobby-track-select");
+
+// In-Game Audio Controls
+const hudAudioBtn = document.getElementById("hud-audio-btn");
+const inGameAudioModal = document.getElementById("in-game-audio-modal");
+const closeAudioModalBtn = document.getElementById("close-audio-modal-btn");
+const hudMasterVol = document.getElementById("hud-master-vol");
+const hudMasterVolTxt = document.getElementById("hud-master-vol-txt");
+const hudMusicVol = document.getElementById("hud-music-vol");
+const hudMusicVolTxt = document.getElementById("hud-music-vol-txt");
+const hudSfxVol = document.getElementById("hud-sfx-vol");
+const hudSfxVolTxt = document.getElementById("hud-sfx-vol-txt");
+const hudTrackSelect = document.getElementById("hud-track-select");
+const hudMuteBtn = document.getElementById("hud-mute-btn");
+
 let selectedClass = "commando";
 
 const network = new NetworkManager();
 const engine = new PixelGameEngine(canvas, network);
 window.engine = engine;
 window.network = network;
+window.sound = sound;
 
 // ----------------------------------------------------------------------------
 // URL ROOM INVITE PRE-FILL
@@ -146,6 +171,9 @@ soloBtn.addEventListener("click", () => {
 function enterGame(roomCode, isHost) {
   lobbyScreen.classList.add("hidden");
   gameContainer.classList.remove("hidden");
+
+  // Launch procedural retro soundtrack
+  sound.startMusic();
 
   if (roomCode) {
     roomInfo.classList.remove("hidden");
@@ -320,3 +348,163 @@ function addChatMessage(sender, text, color = "#fff") {
 restartGameBtn.addEventListener("click", () => {
   window.location.reload();
 });
+
+// ----------------------------------------------------------------------------
+// 5. AUDIO & SOUNDTRACK UI CONTROLLERS
+// ----------------------------------------------------------------------------
+
+function showNotification(text, duration = 2200) {
+  if (!canvasBanner) return;
+  canvasBanner.textContent = text;
+  canvasBanner.classList.add("show");
+  clearTimeout(canvasBanner._timer);
+  canvasBanner._timer = setTimeout(() => {
+    canvasBanner.classList.remove("show");
+  }, duration);
+}
+
+function syncAudioUI() {
+  const masterPct = Math.round(sound.masterVolume * 100);
+  const musicPct = Math.round(sound.musicVolume * 100);
+  const sfxPct = Math.round(sound.sfxVolume * 100);
+  const isMuted = sound.isMuted();
+  const currentTrack = sound.getCurrentTrack();
+  const isMusicPlaying = sound.isMusicPlaying();
+
+  // Lobby Sliders & Readouts
+  if (lobbyMasterVol) lobbyMasterVol.value = masterPct;
+  if (lobbyMasterVolTxt) lobbyMasterVolTxt.textContent = `${masterPct}%`;
+  if (lobbyMusicVol) lobbyMusicVol.value = musicPct;
+  if (lobbyMusicVolTxt) lobbyMusicVolTxt.textContent = `${musicPct}%`;
+  if (lobbySfxVol) lobbySfxVol.value = sfxPct;
+  if (lobbySfxVolTxt) lobbySfxVolTxt.textContent = `${sfxPct}%`;
+  if (lobbyTrackSelect) lobbyTrackSelect.value = currentTrack;
+
+  // Lobby Buttons
+  if (lobbyMuteBtn) {
+    lobbyMuteBtn.textContent = isMuted ? "🔇 Muted" : "🔊 Sound ON";
+    lobbyMuteBtn.classList.toggle("muted", isMuted);
+  }
+  if (lobbyPlayMusicBtn) {
+    lobbyPlayMusicBtn.textContent = isMusicPlaying ? "⏸ Pause Music" : "▶ Play Music";
+    lobbyPlayMusicBtn.classList.toggle("active", isMusicPlaying);
+  }
+
+  // HUD In-Game Sliders & Readouts
+  if (hudMasterVol) hudMasterVol.value = masterPct;
+  if (hudMasterVolTxt) hudMasterVolTxt.textContent = `${masterPct}%`;
+  if (hudMusicVol) hudMusicVol.value = musicPct;
+  if (hudMusicVolTxt) hudMusicVolTxt.textContent = `${musicPct}%`;
+  if (hudSfxVol) hudSfxVol.value = sfxPct;
+  if (hudSfxVolTxt) hudSfxVolTxt.textContent = `${sfxPct}%`;
+  if (hudTrackSelect) hudTrackSelect.value = currentTrack;
+
+  // HUD In-Game Buttons
+  if (hudMuteBtn) {
+    hudMuteBtn.textContent = isMuted ? "🔇 Muted" : "🔊 Sound ON";
+    hudMuteBtn.classList.toggle("muted", isMuted);
+  }
+  if (hudAudioBtn) {
+    hudAudioBtn.textContent = isMuted ? "🔇" : "🔊";
+  }
+}
+
+// Master Volume Sliders
+if (lobbyMasterVol) {
+  lobbyMasterVol.addEventListener("input", (e) => sound.setMasterVolume(e.target.value / 100));
+}
+if (hudMasterVol) {
+  hudMasterVol.addEventListener("input", (e) => sound.setMasterVolume(e.target.value / 100));
+}
+
+// Music Volume Sliders
+if (lobbyMusicVol) {
+  lobbyMusicVol.addEventListener("input", (e) => sound.setMusicVolume(e.target.value / 100));
+}
+if (hudMusicVol) {
+  hudMusicVol.addEventListener("input", (e) => sound.setMusicVolume(e.target.value / 100));
+}
+
+// SFX Volume Sliders
+if (lobbySfxVol) {
+  lobbySfxVol.addEventListener("input", (e) => sound.setSfxVolume(e.target.value / 100));
+}
+if (hudSfxVol) {
+  hudSfxVol.addEventListener("input", (e) => sound.setSfxVolume(e.target.value / 100));
+}
+
+// Track Selection Dropdowns
+if (lobbyTrackSelect) {
+  lobbyTrackSelect.addEventListener("change", (e) => sound.setMusicTrack(e.target.value));
+}
+if (hudTrackSelect) {
+  hudTrackSelect.addEventListener("change", (e) => sound.setMusicTrack(e.target.value));
+}
+
+// Mute Toggles
+if (lobbyMuteBtn) {
+  lobbyMuteBtn.addEventListener("click", () => sound.toggleMute());
+}
+if (hudMuteBtn) {
+  hudMuteBtn.addEventListener("click", () => sound.toggleMute());
+}
+
+// Lobby Soundtrack Preview Play/Pause
+if (lobbyPlayMusicBtn) {
+  lobbyPlayMusicBtn.addEventListener("click", () => {
+    sound.init();
+    if (sound.isMusicPlaying()) {
+      sound.stopMusic();
+    } else {
+      const trk = lobbyTrackSelect ? lobbyTrackSelect.value : "dynamic";
+      sound.startMusic(trk);
+    }
+  });
+}
+
+// HUD In-Game Audio Modal Toggle
+if (hudAudioBtn) {
+  hudAudioBtn.addEventListener("click", () => {
+    if (inGameAudioModal) {
+      inGameAudioModal.classList.toggle("hidden");
+    }
+  });
+}
+
+if (closeAudioModalBtn) {
+  closeAudioModalBtn.addEventListener("click", () => {
+    if (inGameAudioModal) {
+      inGameAudioModal.classList.add("hidden");
+    }
+  });
+}
+
+// Keyboard shortcuts for Audio: [M] Mute, [O] Audio Options, [Esc] Close Audio Modal
+window.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+
+  // Toggle Mute on [M]
+  if (e.key.toLowerCase() === "m") {
+    const isMuted = sound.toggleMute();
+    showNotification(isMuted ? "🔇 Audio Muted [M]" : "🔊 Audio Unmuted [M]");
+  }
+
+  // Toggle In-Game Audio Modal on [O]
+  if (e.key.toLowerCase() === "o") {
+    if (inGameAudioModal) {
+      inGameAudioModal.classList.toggle("hidden");
+    }
+  }
+
+  // Close In-Game Audio Modal on [Escape]
+  if (e.key === "Escape") {
+    if (inGameAudioModal && !inGameAudioModal.classList.contains("hidden")) {
+      inGameAudioModal.classList.add("hidden");
+    }
+  }
+});
+
+// Sync UI on startup and subscribe to audio state changes
+sound.onSettingsChanged(syncAudioUI);
+syncAudioUI();
+

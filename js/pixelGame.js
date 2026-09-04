@@ -332,6 +332,17 @@ export class PixelGameEngine {
     this.updateParticles(dt);
     this.updateFloatingTexts(dt);
 
+    // Dynamic Soundtrack Intensity (0 = ambient dread, 1 = wave combat, 2 = horde frenzy / low health)
+    if (this.waveState === "spawning" || this.waveState === "active") {
+      if (this.myPlayer && (this.myPlayer.hp <= 35 || this.zombies.length > 22)) {
+        sound.setCombatIntensity(2);
+      } else {
+        sound.setCombatIntensity(1);
+      }
+    } else {
+      sound.setCombatIntensity(0);
+    }
+
     // Host & Solo authoritative updates
     if (this.network.isHost || this.network.isSolo) {
       this.updateSpawner(dt);
