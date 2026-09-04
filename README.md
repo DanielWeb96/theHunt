@@ -65,27 +65,22 @@ If you use VS Code, right-click `index.html` and select **"Open with Live Server
 
 ---
 
-## 🌐 How to Publish to GitHub Pages (100% Free Hosting)
+## 🌐 How to Enable GitHub Pages (1-Minute Step)
 
-1. **Create a new repository on GitHub** (e.g. `tower-defense`).
-2. In this folder (`C:\Users\Daniel\Documents\DEV\Games`), run:
-   ```powershell
-   git init
-   git add .
-   git commit -m "Initial commit of Co-op Tower Defense"
-   git branch -M main
-   git remote add origin https://github.com/<your-username>/<repo-name>.git
-   git push -u origin main
-   ```
-3. On GitHub, go to your repository **Settings** → **Pages** (in the left sidebar).
-4. Under **Branch**, select `main` and `/ (root)`, then click **Save**.
-5. In ~1 minute, GitHub will give you your free public link:
-   `https://<your-username>.github.io/<repo-name>/`
+All your code has already been pushed to `main`! To turn on your live URL:
+
+1. Open your repository settings: **[GitHub Pages Settings](https://github.com/DanielWeb96/towerTower/settings/pages)**
+2. Under **Build and deployment**:
+   * **Source**: `Deploy from a branch`
+   * **Branch**: Select `main` and `/ (root)`
+   * Click **Save**
+3. In ~60 seconds, your game is live for the world at:
+   👉 **`https://danielweb96.github.io/towerTower/`**
 
 ---
 
 ## 🤝 Playing With Friends
-1. Send your friends your GitHub Pages link.
+1. Send your friends your live link: `https://danielweb96.github.io/towerTower/`
 2. Tell them the **20-letter password** (`cooptowerdefensepass`).
 3. Click **Host Co-op Match** to get a 4-letter Room Code.
 4. Click **Copy Link** to send them a direct invitation link (or have them enter the code).
