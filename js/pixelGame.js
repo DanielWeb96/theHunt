@@ -164,6 +164,7 @@ export class PixelGameEngine {
   initLocalPlayer(charClass) {
     const cfg = CONFIG.CHARACTERS[charClass] || CONFIG.CHARACTERS.commando;
     this.myPlayer.id = this.network.myPeerId || "local";
+    this.myPlayer.name = this.network.playerName || (this.network.isHost ? "Host Commander" : "Survivor");
     this.myPlayer.charClass = charClass;
     this.myPlayer.hp = cfg.hp;
     this.myPlayer.maxHp = cfg.hp;
@@ -361,12 +362,21 @@ export class PixelGameEngine {
         this.syncTimer = 0;
         this.network.sendAction({
           type: "PLAYER_SYNC",
+          name: this.network.playerName || "Ally",
           x: Math.round(this.myPlayer.x),
           y: Math.round(this.myPlayer.y),
+          vx: Math.round((this.myPlayer.vx || 0) * 10) / 10,
+          vy: Math.round((this.myPlayer.vy || 0) * 10) / 10,
           angle: Math.round(this.myPlayer.angle * 100) / 100,
           hp: this.myPlayer.hp,
+          maxHp: this.myPlayer.maxHp,
           charClass: this.myPlayer.charClass,
-          isDowned: this.myPlayer.isDowned
+          isDowned: this.myPlayer.isDowned,
+          isMoving: this.myPlayer.isMoving,
+          walkAnim: Math.round(this.myPlayer.walkAnim * 100) / 100,
+          isReloading: this.myPlayer.isReloading,
+          reloadTimer: Math.round(this.myPlayer.reloadTimer * 10) / 10,
+          fireCooldown: Math.round(this.myPlayer.fireCooldown * 100) / 100
         });
       }
     }
@@ -988,12 +998,37 @@ export class PixelGameEngine {
   }
 
   broadcastState() {
+    // 1. Host authoritative player state
+    const hostData = {
+      id: this.network.myPeerId,
+      name: this.network.playerName || "Host Commander",
+      x: Math.round(this.myPlayer.x),
+      y: Math.round(this.myPlayer.y),
+      vx: Math.round((this.myPlayer.vx || 0) * 10) / 10,
+      vy: Math.round((this.myPlayer.vy || 0) * 10) / 10,
+      angle: Math.round(this.myPlayer.angle * 100) / 100,
+      hp: this.myPlayer.hp,
+      maxHp: this.myPlayer.maxHp,
+      charClass: this.myPlayer.charClass,
+      isDowned: this.myPlayer.isDowned,
+      isMoving: this.myPlayer.isMoving,
+      walkAnim: Math.round(this.myPlayer.walkAnim * 100) / 100,
+      isReloading: this.myPlayer.isReloading,
+      reloadTimer: Math.round(this.myPlayer.reloadTimer * 10) / 10,
+      fireCooldown: Math.round(this.myPlayer.fireCooldown * 100) / 100,
+      isHost: true
+    };
+
+    // 2. Full roster of all active players in match
+    const allPlayers = [hostData, ...Object.values(this.otherPlayers)];
+
     this.network.broadcast({
       type: "SYNC_STATE",
       state: {
         wave: this.wave,
         waveState: this.waveState,
         teamScore: this.teamScore,
+        players: allPlayers,
         zombies: this.zombies.map(z => ({
           id: z.id,
           type: z.type,
@@ -1010,35 +1045,106 @@ export class PixelGameEngine {
   }
 
   setupNetworkHooks() {
+    // Immediate state sync when a new client establishes connection
+    this.network.onClientConnected = () => {
+      if (this.network.isHost) {
+        this.broadcastState();
+      }
+    };
+
+    // Action listener (position syncs, bullet spawns, wave triggers)
     this.network.onPlayerAction = (act, senderId) => {
       if (!act) return;
 
       if (act.type === "PLAYER_SYNC") {
         this.otherPlayers[senderId] = {
           id: senderId,
+          name: act.name || "Teammate",
           x: act.x,
           y: act.y,
+          vx: act.vx || 0,
+          vy: act.vy || 0,
           angle: act.angle,
           hp: act.hp,
+          maxHp: act.maxHp || 100,
           charClass: act.charClass,
-          isDowned: act.isDowned
+          isDowned: act.isDowned,
+          isMoving: act.isMoving,
+          walkAnim: act.walkAnim || 0,
+          isReloading: act.isReloading,
+          reloadTimer: act.reloadTimer || 0,
+          fireCooldown: act.fireCooldown || 0,
+          isHost: false
         };
       } else if (act.type === "BULLET_SPAWN") {
-        this.bullets.push({
-          ...act.bullet,
-          life: 1.0,
-          pierce: 1
-        });
+        // Prevent duplicate bullet creation for the local shooter
+        if (act.bullet && act.bullet.ownerId !== this.network.myPeerId) {
+          this.bullets.push({
+            ...act.bullet,
+            life: 1.0,
+            pierce: act.bullet.pierce || 1
+          });
+        }
+      } else if (act.type === "TRIGGER_WAVE") {
+        if (this.network.isHost || this.network.isSolo) {
+          this.startNextWave();
+        }
       }
     };
 
+    // Authoritative state receiver (Client updates from Host)
     this.network.onStateReceived = (state) => {
+      if (!state) return;
       this.wave = state.wave;
       this.waveState = state.waveState;
       this.teamScore = state.teamScore;
-      this.zombies = state.zombies;
-      this.turrets = state.turrets;
-      this.pickups = state.pickups;
+      this.zombies = state.zombies || [];
+      this.turrets = state.turrets || [];
+      this.pickups = state.pickups || [];
+
+      // Update and render all other players (INCLUDING THE HOST!)
+      if (state.players && Array.isArray(state.players)) {
+        const activeIds = new Set();
+        for (const p of state.players) {
+          // If this is our own local player, keep local position prediction but sync authoritative HP/downed state
+          if (p.id === this.network.myPeerId) {
+            if (p.hp !== undefined) this.myPlayer.hp = p.hp;
+            if (p.isDowned !== undefined) this.myPlayer.isDowned = p.isDowned;
+            continue;
+          }
+
+          activeIds.add(p.id);
+
+          if (!this.otherPlayers[p.id]) {
+            this.otherPlayers[p.id] = { ...p };
+          } else {
+            const target = this.otherPlayers[p.id];
+            target.x = p.x;
+            target.y = p.y;
+            target.vx = p.vx || 0;
+            target.vy = p.vy || 0;
+            target.angle = p.angle;
+            target.hp = p.hp;
+            target.maxHp = p.maxHp || 100;
+            target.charClass = p.charClass;
+            target.name = p.name;
+            target.isDowned = p.isDowned;
+            target.isMoving = p.isMoving;
+            target.walkAnim = p.walkAnim;
+            target.isReloading = p.isReloading;
+            target.reloadTimer = p.reloadTimer;
+            target.fireCooldown = p.fireCooldown;
+            target.isHost = p.isHost;
+          }
+        }
+
+        // Clean up any disconnected players
+        for (const id of Object.keys(this.otherPlayers)) {
+          if (!activeIds.has(id)) {
+            delete this.otherPlayers[id];
+          }
+        }
+      }
     };
   }
 
@@ -1825,7 +1931,8 @@ export class PixelGameEngine {
     ctx.lineWidth = 1;
     ctx.strokeRect(-barW / 2 - 1, barY - 1, barW + 2, barH + 2);
 
-    const ratio = Math.max(0, p.hp / p.maxHp);
+    const maxHp = p.maxHp || cfg.hp || 100;
+    const ratio = Math.max(0, Math.min(1, p.hp / maxHp));
     ctx.fillStyle = ratio > 0.5 ? "#22c55e" : ratio > 0.25 ? "#f59e0b" : "#ef4444";
     ctx.fillRect(-barW / 2, barY, barW * ratio, barH);
 
@@ -1837,7 +1944,10 @@ export class PixelGameEngine {
     else if (p.charClass === "engineer") classIcon = "⚙️";
 
     // Name Tag
-    const displayName = isLocal ? `${classIcon} ${cfg.name} (You)` : `${classIcon} ${p.name || cfg.name}`;
+    const hostCrown = p.isHost ? " 👑" : "";
+    const displayName = isLocal 
+      ? `${classIcon} ${p.name || cfg.name} (You)` 
+      : `${classIcon} ${p.name || cfg.name}${hostCrown}`;
     ctx.font = "bold 10px system-ui";
     ctx.fillStyle = "#ffffff";
     ctx.textAlign = "center";

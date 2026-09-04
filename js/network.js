@@ -125,12 +125,21 @@ export class NetworkManager {
         });
 
         if (this.onPlayerJoined) this.onPlayerJoined(newPlayer);
+        if (this.onClientConnected) this.onClientConnected(conn.peer);
         break;
       }
 
       case "ACTION":
         if (this.onPlayerAction) {
           this.onPlayerAction(data.action, conn.peer);
+        }
+        // Relay gameplay events (like bullets or abilities) to other peers
+        if (data.action && data.action.type !== "PLAYER_SYNC") {
+          this.broadcast({
+            type: "ACTION",
+            senderId: conn.peer,
+            action: data.action
+          }, conn.peer);
         }
         break;
 
@@ -230,6 +239,12 @@ export class NetworkManager {
         }
         break;
 
+      case "ACTION":
+        if (this.onPlayerAction) {
+          this.onPlayerAction(data.action, data.senderId);
+        }
+        break;
+
       case "CHAT":
         if (this.onChatReceived) {
           this.onChatReceived(data.sender, data.text, data.color);
@@ -248,7 +263,20 @@ export class NetworkManager {
   }
 
   sendAction(action) {
-    if (this.isHost || this.isSolo) {
+    if (this.isHost) {
+      if (this.onPlayerAction) {
+        this.onPlayerAction(action, this.myPeerId);
+      }
+      // Broadcast action to all connected clients
+      this.broadcast({
+        type: "ACTION",
+        senderId: this.myPeerId,
+        action
+      });
+      return;
+    }
+
+    if (this.isSolo) {
       if (this.onPlayerAction) {
         this.onPlayerAction(action, this.myPeerId);
       }
