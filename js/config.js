@@ -4,15 +4,10 @@
 
 export const CONFIG = {
   // --------------------------------------------------------------------------
-  // PASSWORD CONFIGURATION (Must be exactly 20 letters)
+  // PASSWORD CONFIGURATION
   // --------------------------------------------------------------------------
-  // The default 20-letter password:
-  // "cooptowerdefensepass" (20 characters)
-  // You can change this string at any time to your own 20-letter password!
-  DEFAULT_PASSWORD: "cooptowerdefensepass",
-  
-  // Enforce strict 20 character length on password input
-  PASSWORD_LENGTH: 20,
+  DEFAULT_PASSWORD: "dakustowerGame69",
+  PASSWORD_LENGTH: 16,
 
   // --------------------------------------------------------------------------
   // GAMEPLAY BALANCING

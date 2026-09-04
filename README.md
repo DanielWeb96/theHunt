@@ -6,18 +6,18 @@ Built with pure HTML5 Canvas, JavaScript (ES Modules), Web Audio API, and **WebR
 
 ---
 
-## 🔒 20-Letter Security Password
+## 🔒 Security Password Access
 
-Access to the game is protected by a strict **20-letter security access key**.
+Access to the game is protected by a security access key.
 
-* **Default Password:** `` (exactly 20 letters)
+* **Default Password:** `dakustowerGame69`
 * Anyone visiting your game must enter this password to unlock the lobby.
 
 ### How to Change the Password:
-Open [js/config.js](file:///C:/Users/Daniel/Documents/DEV/Games/js/config.js) and change line 13:
+Open [js/config.js](file:///C:/Users/Daniel/Documents/DEV/Games/js/config.js) and change line 10:
 ```javascript
-// Must be exactly 20 characters
-DEFAULT_PASSWORD: "",
+DEFAULT_PASSWORD: "yournewpassword",
+PASSWORD_LENGTH: 16, // set to your password's length
 ```
 Save the file, and the game will immediately enforce your new 20-letter password.
 
@@ -81,7 +81,7 @@ All your code has already been pushed to `main`! To turn on your live URL:
 
 ## 🤝 Playing With Friends
 1. Send your friends your live link: `https://danielweb96.github.io/towerTower/`
-2. Tell them the **20-letter password** (`cooptowerdefensepass`).
+2. Tell them the **access password** (`dakustowerGame69`).
 3. Click **Host Co-op Match** to get a 4-letter Room Code.
 4. Click **Copy Link** to send them a direct invitation link (or have them enter the code).
 5. Defend the Sanctum together!
