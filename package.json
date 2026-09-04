@@ -1,0 +1,9 @@
+{
+  "name": "the-hunt-zombie-defense",
+  "version": "1.0.0",
+  "description": "16-bit Retro Pixel Art Urban Zombie Survival",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
