@@ -17,7 +17,7 @@ Access to the game is protected by a strict **20-letter security access key**.
 Open [js/config.js](file:///C:/Users/Daniel/Documents/DEV/Games/js/config.js) and change line 13:
 ```javascript
 // Must be exactly 20 characters
-DEFAULT_PASSWORD: "yourtwentyletterpass",
+DEFAULT_PASSWORD: "",
 ```
 Save the file, and the game will immediately enforce your new 20-letter password.
 
