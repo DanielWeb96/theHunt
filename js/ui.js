@@ -131,11 +131,12 @@ soloBtn.addEventListener("click", () => {
   network.playerName = playerNameInput.value.trim() || "Lone Survivor";
   network.charClass = selectedClass;
   network.myPeerId = "local_solo";
+  const charCfg = CONFIG.CHARACTERS[selectedClass] || CONFIG.CHARACTERS.commando;
   network.players = [{
     id: "local_solo",
     name: network.playerName,
     charClass: selectedClass,
-    color: "#22c55e",
+    color: charCfg.color,
     isHost: true
   }];
   engine.initLocalPlayer(selectedClass);

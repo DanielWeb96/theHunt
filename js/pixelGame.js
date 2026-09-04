@@ -41,6 +41,14 @@ export class PixelGameEngine {
       this.mapLoaded = true;
     }
 
+    // Preload Character Portrait Images (Commando, Sniper, Medic, Heavy, Engineer)
+    this.characterImages = {};
+    for (const [key, charCfg] of Object.entries(CONFIG.CHARACTERS)) {
+      const img = new Image();
+      img.src = charCfg.portrait;
+      this.characterImages[key] = img;
+    }
+
     // Urban Map Hitboxes (Buildings, Fortification Bunker, Sandbags, Vehicles)
     this.hitboxes = CONFIG.HITBOXES || CONFIG.HOUSES || [];
     this.houses = this.hitboxes; // Backwards compatibility alias
@@ -63,7 +71,9 @@ export class PixelGameEngine {
       reloadTimer: 0,
       fireCooldown: 0,
       abilityCooldownTimer: 0,
-      isDowned: false
+      isDowned: false,
+      isMoving: false,
+      walkAnim: 0
     };
 
     // Entities
@@ -375,6 +385,12 @@ export class PixelGameEngine {
 
     const moveSpeed = cfg.speed * 60; // pixels per second
     const pRadius = 14;
+
+    const isMoving = mx !== 0 || my !== 0;
+    p.isMoving = isMoving;
+    if (isMoving) {
+      p.walkAnim = (p.walkAnim || 0) + dt * 10;
+    }
 
     // Move X axis (with smooth hitbox sliding)
     if (mx !== 0) {
@@ -1289,69 +1305,285 @@ export class PixelGameEngine {
   }
 
   renderPlayer(ctx, p, isLocal) {
+    const cfg = CONFIG.CHARACTERS[p.charClass] || CONFIG.CHARACTERS.commando;
+    const isMoving = p.isMoving || (p.vx && Math.abs(p.vx) > 0.1) || (p.vy && Math.abs(p.vy) > 0.1);
+    const walkAnim = p.walkAnim || 0;
+
     ctx.save();
     ctx.translate(p.x, p.y);
 
+    // 1. Drop Shadow underneath survivor
+    ctx.fillStyle = "rgba(0, 0, 0, 0.42)";
+    ctx.beginPath();
+    ctx.ellipse(0, 8, 17, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     // Downed state
     if (p.isDowned) {
+      ctx.fillStyle = "rgba(239, 68, 68, 0.25)";
+      ctx.beginPath();
+      ctx.arc(0, 0, 26 + Math.sin(Date.now() * 0.008) * 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.rotate(p.angle + Math.PI / 2);
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(-14, -8, 28, 16);
+      ctx.fillStyle = cfg.color;
+      ctx.fillRect(-10, -6, 20, 12);
+      ctx.restore();
+
+      ctx.font = "bold 10px monospace";
       ctx.fillStyle = "#ef4444";
-      ctx.fillRect(-12, -4, 24, 8);
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 9px system-ui";
-      ctx.fillText("REVIVE!", -14, -10);
+      ctx.textAlign = "center";
+      ctx.fillText("⚠️ DOWNED - REVIVE [SPACE]!", 0, -24);
       ctx.restore();
       return;
     }
 
-    const cfg = CONFIG.CHARACTERS[p.charClass] || CONFIG.CHARACTERS.commando;
-
-    // Team color aura ring
-    ctx.strokeStyle = cfg.color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, 16, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Rotate body towards aim angle
+    // 2. Animated Walking Boots (stepping underneath the player)
+    ctx.save();
     ctx.rotate(p.angle);
 
-    // Character body (Pixel art soldier)
-    ctx.fillStyle = cfg.color;
-    ctx.fillRect(-8, -8, 16, 16);
+    const stepOffset = isMoving ? Math.sin(walkAnim) * 5 : 0;
+    ctx.fillStyle = "#1e293b"; // tactical military boots
+    ctx.fillRect(-9, -12 + stepOffset, 5, 8);
+    ctx.fillRect(-9, 4 - stepOffset, 5, 8);
 
-    // Weapon barrel extending forward
-    ctx.fillStyle = "#1f2937";
-    ctx.fillRect(4, 2, 14, 4);
+    // 3. Hands & Weapon extending forward in aim direction
+    const recoil = (p.fireCooldown > 0) ? -3 : 0;
 
-    // Laser sight for sniper
     if (p.charClass === "sniper") {
-      ctx.strokeStyle = "rgba(56, 189, 248, 0.4)";
-      ctx.lineWidth = 1;
+      // Long Barrett .50 Cal Sniper
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(8 + recoil, 1, 26, 3.5); // long heavy barrel
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(6 + recoil, -0.5, 12, 5); // receiver
+      ctx.fillStyle = "#38bdf8";
+      ctx.fillRect(10 + recoil, -3, 8, 2.5); // high-magnification scope
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(32 + recoil, 0, 4, 5.5); // muzzle brake
+
+      // Tactical blue laser sight beam
+      ctx.save();
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.45)";
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([6, 6]);
       ctx.beginPath();
-      ctx.moveTo(18, 4);
-      ctx.lineTo(350, 4);
+      ctx.moveTo(34 + recoil, 2.7);
+      ctx.lineTo(400, 2.7);
       ctx.stroke();
+      ctx.restore();
+    } else if (p.charClass === "medic") {
+      // Dual Vector SMGs
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(8 + recoil, -8, 14, 4); // top SMG
+      ctx.fillRect(8 + recoil, 5, 14, 4);  // bottom SMG
+      ctx.fillStyle = "#f43f5e";
+      ctx.fillRect(10 + recoil, -9, 4, 2); // red dot sights
+      ctx.fillRect(10 + recoil, 8, 4, 2);
+    } else if (p.charClass === "heavy") {
+      // SPAS-12 Heavy Shotgun with hazard styling
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(6 + recoil, -2, 20, 6.5); // wide receiver & barrel
+      ctx.fillStyle = "#f59e0b";
+      ctx.fillRect(8 + recoil, 0, 7, 3);    // hazard amber accents
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(14 + recoil, 4, 4, 4);   // shotgun tube magazine
+    } else if (p.charClass === "engineer") {
+      // Riot Carbine & Shoulder Turret Sensor
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(8 + recoil, 0, 18, 4);
+      ctx.fillStyle = "#a855f7";
+      ctx.fillRect(12 + recoil, -2, 5, 2); // tech holographic optic
+
+      // Subtle flashlight cone
+      const grad = ctx.createRadialGradient(24, 2, 4, 180, 2, 80);
+      grad.addColorStop(0, "rgba(255, 255, 200, 0.22)");
+      grad.addColorStop(1, "rgba(255, 255, 200, 0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(24, 2);
+      ctx.arc(24, 2, 160, -0.25, 0.25);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // Commando M4A1 Assault Rifle
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(8 + recoil, 0, 18, 4); // barrel & body
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(6 + recoil, -1, 10, 5); // receiver
+      ctx.fillStyle = "#22c55e";
+      ctx.fillRect(10 + recoil, -3, 6, 2); // tactical optic
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(12 + recoil, 4, 3, 5);  // magazine
     }
 
+    // Tactical Gloved Hands holding the weapon
+    ctx.fillStyle = "#334155";
+    ctx.beginPath();
+    ctx.arc(8 + recoil, -4, 3.5, 0, Math.PI * 2);
+    ctx.arc(14 + recoil, 4, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Muzzle Flash
+    if (p.fireCooldown > 0 && p.fireCooldown > cfg.fireRate * 0.55) {
+      const flashX = 26 + (p.charClass === "sniper" ? 8 : 0);
+      ctx.fillStyle = "#fef08a";
+      ctx.beginPath();
+      ctx.arc(flashX, 2, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#f59e0b";
+      ctx.beginPath();
+      ctx.arc(flashX + 2, 2, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore(); // end aim-rotation
+
+    // 4. THE CHOSEN CHARACTER AVATAR TOKEN
+    const tokenRadius = 20;
+    const charImg = this.characterImages ? this.characterImages[p.charClass] : null;
+    const isImgReady = charImg && charImg.complete && charImg.naturalWidth > 0;
+
+    // Glowing outer aura / tactical ring
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(0, 0, tokenRadius + 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#0f172a";
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = cfg.color;
+    ctx.stroke();
+
+    // Circular portrait clip
+    ctx.beginPath();
+    ctx.arc(0, 0, tokenRadius, 0, Math.PI * 2);
+    ctx.clip();
+
+    if (isImgReady) {
+      // Precise crop focusing directly on face, helmet & character identity
+      let cropSize = charImg.naturalWidth * 0.44;
+      let cropY = charImg.naturalHeight * 0.08;
+      if (p.charClass === "sniper") {
+        cropSize = charImg.naturalWidth * 0.42;
+        cropY = charImg.naturalHeight * 0.12;
+      } else if (p.charClass === "medic") {
+        cropSize = charImg.naturalWidth * 0.40;
+        cropY = charImg.naturalHeight * 0.04;
+      } else if (p.charClass === "heavy") {
+        cropSize = charImg.naturalWidth * 0.44;
+        cropY = charImg.naturalHeight * 0.08;
+      } else if (p.charClass === "engineer") {
+        cropSize = charImg.naturalWidth * 0.42;
+        cropY = charImg.naturalHeight * 0.10;
+      }
+      const cropX = (charImg.naturalWidth - cropSize) / 2;
+
+      ctx.drawImage(
+        charImg,
+        cropX, cropY, cropSize, cropSize,
+        -tokenRadius, -tokenRadius, tokenRadius * 2, tokenRadius * 2
+      );
+    } else {
+      // Detailed fallback top-down soldier body (never a plain green box)
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(-tokenRadius, -tokenRadius, tokenRadius * 2, tokenRadius * 2);
+      ctx.fillStyle = cfg.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, tokenRadius - 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(-6, -4, 12, 6);
+    }
+
+    // Subtle glass lens reflection
+    const grad = ctx.createLinearGradient(-tokenRadius, -tokenRadius, tokenRadius, tokenRadius);
+    grad.addColorStop(0, "rgba(255, 255, 255, 0.28)");
+    grad.addColorStop(0.4, "rgba(255, 255, 255, 0.05)");
+    grad.addColorStop(1, "rgba(0, 0, 0, 0.2)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(-tokenRadius, -tokenRadius, tokenRadius * 2, tokenRadius * 2);
+
+    ctx.restore(); // end token clip
+
+    // 5. Directional Aim Arrowhead on Token Rim
+    ctx.save();
+    ctx.rotate(p.angle);
+    ctx.fillStyle = cfg.color;
+    ctx.beginPath();
+    ctx.moveTo(tokenRadius + 5, 0);
+    ctx.lineTo(tokenRadius, -4);
+    ctx.lineTo(tokenRadius + 2, 0);
+    ctx.lineTo(tokenRadius, 4);
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
 
-    // Player Health Bar (Non-rotated)
+    // 6. Class Badge Icon (Bottom-Right of Token)
+    let classIcon = "⭐";
+    if (p.charClass === "sniper") classIcon = "🎯";
+    else if (p.charClass === "medic") classIcon = "✚";
+    else if (p.charClass === "heavy") classIcon = "💥";
+    else if (p.charClass === "engineer") classIcon = "⚙️";
+
     ctx.save();
-    ctx.translate(p.x, p.y);
-    const barW = 28;
+    ctx.beginPath();
+    ctx.arc(15, 15, 7.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#0f172a";
+    ctx.fill();
+    ctx.strokeStyle = cfg.color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.font = "bold 9px system-ui";
+    ctx.fillStyle = cfg.color;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(classIcon, 15, 15);
+    ctx.restore();
+
+    // 7. Reloading Spinner Overlay
+    if (p.isReloading) {
+      const cfgReload = cfg.reloadTime || 1.5;
+      const progress = 1 - (p.reloadTimer / cfgReload);
+      ctx.save();
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, tokenRadius + 6, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = "#fbbf24";
+      ctx.font = "bold 9px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("RELOAD", 0, -34);
+      ctx.restore();
+    }
+
+    // 8. Health Bar (Non-rotated)
+    const barW = 34;
     const barH = 4;
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.fillRect(-barW / 2, -24, barW, barH);
+    const barY = -28;
+    ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+    ctx.fillRect(-barW / 2 - 1, barY - 1, barW + 2, barH + 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-barW / 2 - 1, barY - 1, barW + 2, barH + 2);
 
     const ratio = Math.max(0, p.hp / p.maxHp);
     ctx.fillStyle = ratio > 0.5 ? "#22c55e" : ratio > 0.25 ? "#f59e0b" : "#ef4444";
-    ctx.fillRect(-barW / 2, -24, barW * ratio, barH);
+    ctx.fillRect(-barW / 2, barY, barW * ratio, barH);
 
-    // Nickname Tag
+    // 9. Nickname & Character Title Tag
+    const displayName = isLocal ? `${cfg.name} (You)` : (p.name || cfg.name);
     ctx.font = "bold 10px system-ui";
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = "#ffffff";
     ctx.textAlign = "center";
-    ctx.fillText(isLocal ? `${this.network.playerName} (You)` : (p.name || "Ally"), 0, -28);
+    ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+    ctx.shadowBlur = 4;
+    ctx.fillText(displayName, 0, barY - 5);
+    ctx.shadowBlur = 0;
+
     ctx.restore();
   }
 
@@ -1488,14 +1720,16 @@ export class PixelGameEngine {
       ctx.fillRect(miniX + z.x * scale - 1, miniY + z.y * scale - 1, 2, 2);
     }
 
-    // Teammates (Blue dots)
-    ctx.fillStyle = "#38bdf8";
+    // Teammates (Class-colored dots)
     for (const p of Object.values(this.otherPlayers)) {
+      const pCfg = CONFIG.CHARACTERS[p.charClass] || CONFIG.CHARACTERS.commando;
+      ctx.fillStyle = pCfg.color || "#38bdf8";
       ctx.fillRect(miniX + p.x * scale - 2, miniY + p.y * scale - 2, 4, 4);
     }
 
-    // Local Player (Green dot)
-    ctx.fillStyle = "#22c55e";
+    // Local Player (Chosen Character color dot)
+    const myCfg = CONFIG.CHARACTERS[this.myPlayer.charClass] || CONFIG.CHARACTERS.commando;
+    ctx.fillStyle = myCfg.color || "#22c55e";
     ctx.fillRect(miniX + this.myPlayer.x * scale - 2.5, miniY + this.myPlayer.y * scale - 2.5, 5, 5);
 
     ctx.restore();
