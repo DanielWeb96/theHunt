@@ -200,11 +200,11 @@ function enterGame(roomCode, isHost) {
 
   // Populate active character card in side HUD
   const cfg = CONFIG.CHARACTERS[selectedClass];
-  hudCharImg.src = cfg.portrait;
-  hudCharName.textContent = cfg.name;
-  hudCharTitle.textContent = cfg.title;
-  hudWeaponName.textContent = cfg.weapon;
-  hudAbilityName.textContent = `Special: ${cfg.ability}`;
+  if (hudCharImg && cfg.portrait) hudCharImg.src = cfg.portrait;
+  if (hudCharName) hudCharName.textContent = cfg.name;
+  if (hudCharTitle) hudCharTitle.textContent = cfg.title;
+  if (hudWeaponName) hudWeaponName.textContent = cfg.weapon;
+  if (hudAbilityName) hudAbilityName.textContent = `Special: ${cfg.ability}`;
 
   updatePlayerChips();
   engine.resize();
@@ -291,7 +291,7 @@ function updateHUD() {
   }
 
   // Auto wave (Host only)
-  if ((network.isHost || network.isSolo) && autoWaveToggle.checked) {
+  if ((network.isHost || network.isSolo) && autoWaveToggle && autoWaveToggle.checked) {
     if (engine.waveState === "idle" && engine.wave > 0) {
       engine.startNextWave();
     }

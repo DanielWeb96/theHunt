@@ -23,11 +23,23 @@ export class PixelGameEngine {
     this.waveState = "idle"; // "idle", "spawning", "active", "gameover"
     this.teamScore = 0;
 
-    // Assets
-    this.mapImage = new Image();
-    this.mapImage.src = "assets/urban_map.jpg";
+    // Assets: Nano Banana Generated Clean Urban Map (Crossroads)
     this.mapLoaded = false;
-    this.mapImage.onload = () => { this.mapLoaded = true; };
+    this.mapImage = new Image();
+    this.mapImage.onload = () => {
+      this.mapLoaded = true;
+      console.log("Urban map loaded successfully:", this.mapImage.naturalWidth, "x", this.mapImage.naturalHeight);
+    };
+    this.mapImage.onerror = (err) => {
+      console.warn("Retrying map image with ./assets/urban_map.jpg", err);
+      if (!this.mapImage.src.includes("./assets/")) {
+        this.mapImage.src = "./assets/urban_map.jpg";
+      }
+    };
+    this.mapImage.src = "assets/urban_map.jpg";
+    if (this.mapImage.complete && this.mapImage.naturalWidth > 0) {
+      this.mapLoaded = true;
+    }
 
     // Local player state
     this.myPlayer = {
@@ -871,15 +883,13 @@ export class PixelGameEngine {
     // Camera transform
     ctx.translate(Math.round(this.width / 2 - this.camera.x), Math.round(this.height / 2 - this.camera.y));
 
-    // 1. Draw Big Urban Map Image (2048x2048 tiled 2x2 with generated pixel art)
-    if (this.mapLoaded) {
-      ctx.drawImage(this.mapImage, 0, 0, 1024, 1024);
-      ctx.drawImage(this.mapImage, 1024, 0, 1024, 1024);
-      ctx.drawImage(this.mapImage, 0, 1024, 1024, 1024);
-      ctx.drawImage(this.mapImage, 1024, 1024, 1024, 1024);
+    // 1. Draw Big Urban Map Image (Scaled across full 2048x2048 world)
+    const isMapReady = this.mapLoaded || (this.mapImage.complete && this.mapImage.naturalWidth > 0);
+    if (isMapReady) {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(this.mapImage, 0, 0, this.worldWidth, this.worldHeight);
     } else {
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(0, 0, this.worldWidth, this.worldHeight);
+      this.drawFallbackUrbanMap(ctx);
     }
 
     // World border
@@ -1087,6 +1097,52 @@ export class PixelGameEngine {
     ctx.restore();
   }
 
+  drawFallbackUrbanMap(ctx) {
+    // Asphalt road base
+    ctx.fillStyle = "#1e232a";
+    ctx.fillRect(0, 0, this.worldWidth, this.worldHeight);
+
+    const midX = this.worldWidth / 2;
+    const midY = this.worldHeight / 2;
+    const roadW = 280;
+
+    // Building blocks in 4 quadrants
+    ctx.fillStyle = "#14171f";
+    ctx.fillRect(40, 40, midX - roadW / 2 - 60, midY - roadW / 2 - 60);
+    ctx.fillRect(midX + roadW / 2 + 20, 40, midX - roadW / 2 - 60, midY - roadW / 2 - 60);
+    ctx.fillRect(40, midY + roadW / 2 + 20, midX - roadW / 2 - 60, midY - roadW / 2 - 60);
+    ctx.fillRect(midX + roadW / 2 + 20, midY + roadW / 2 + 20, midX - roadW / 2 - 60, midY - roadW / 2 - 60);
+
+    // Sidewalk curbs
+    ctx.fillStyle = "#374151";
+    ctx.fillRect(midX - roadW / 2 - 20, 0, 20, this.worldHeight);
+    ctx.fillRect(midX + roadW / 2, 0, 20, this.worldHeight);
+    ctx.fillRect(0, midY - roadW / 2 - 20, this.worldWidth, 20);
+    ctx.fillRect(0, midY + roadW / 2, this.worldWidth, 20);
+
+    // Double yellow center lines (North-South)
+    ctx.fillStyle = "#eab308";
+    ctx.fillRect(midX - 3, 0, 2, midY - roadW / 2);
+    ctx.fillRect(midX + 2, 0, 2, midY - roadW / 2);
+    ctx.fillRect(midX - 3, midY + roadW / 2, 2, midY - roadW / 2);
+    ctx.fillRect(midX + 2, midY + roadW / 2, 2, midY - roadW / 2);
+
+    // Double yellow center lines (East-West)
+    ctx.fillRect(0, midY - 3, midX - roadW / 2, 2);
+    ctx.fillRect(0, midY + 2, midX - roadW / 2, 2);
+    ctx.fillRect(midX + roadW / 2, midY - 3, midX - roadW / 2, 2);
+    ctx.fillRect(midX + roadW / 2, midY + 2, midX - roadW / 2, 2);
+
+    // Crosswalk zebra stripes
+    ctx.fillStyle = "#cbd5e1";
+    for (let i = 0; i < 7; i++) {
+      ctx.fillRect(midX - roadW / 2 + 16 + i * 36, midY - roadW / 2 - 32, 20, 28);
+      ctx.fillRect(midX - roadW / 2 + 16 + i * 36, midY + roadW / 2 + 4, 20, 28);
+      ctx.fillRect(midX - roadW / 2 - 32, midY - roadW / 2 + 16 + i * 36, 28, 20);
+      ctx.fillRect(midX + roadW / 2 + 4, midY - roadW / 2 + 16 + i * 36, 28, 20);
+    }
+  }
+
   renderMinimap(ctx) {
     const miniSize = 135;
     const pad = 16;
@@ -1095,10 +1151,18 @@ export class PixelGameEngine {
 
     // Minimap Background
     ctx.save();
-    ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-    ctx.lineWidth = 2;
+    ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
     ctx.fillRect(miniX, miniY, miniSize, miniSize);
+
+    const isMapReady = this.mapLoaded || (this.mapImage.complete && this.mapImage.naturalWidth > 0);
+    if (isMapReady) {
+      ctx.globalAlpha = 0.55;
+      ctx.drawImage(this.mapImage, miniX, miniY, miniSize, miniSize);
+      ctx.globalAlpha = 1.0;
+    }
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+    ctx.lineWidth = 2;
     ctx.strokeRect(miniX, miniY, miniSize, miniSize);
 
     const scale = miniSize / this.worldWidth;

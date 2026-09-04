@@ -182,6 +182,10 @@
             <span class="hud-weapon-label" id="hud-weapon-name">M4A1 Rifle</span>
             <span class="hud-ammo-badge"><span id="stat-ammo">30</span> / <span id="stat-max-ammo">30</span></span>
           </div>
+          <!-- Special Ability Label -->
+          <div class="hud-ability-row">
+            <span class="hud-ability-tag" id="hud-ability-name">Special: Frag Grenade</span>
+          </div>
         </div>
       </div>
 
@@ -199,7 +203,12 @@
           <span class="hud-divider">|</span>
           <span class="hud-enemy-count">🧟 <strong id="stat-enemies">0</strong> Undead</span>
         </div>
-        <button id="start-wave-btn" class="btn-wave-compact">🚀 Trigger Night 1</button>
+        <div class="hud-wave-actions">
+          <button id="start-wave-btn" class="btn-wave-compact">🚀 Trigger Night 1</button>
+          <label class="auto-wave-label">
+            <input type="checkbox" id="auto-wave-toggle"> Auto
+          </label>
+        </div>
       </div>
       <div id="canvas-banner" class="canvas-banner">Night Incoming!</div>
     </div>

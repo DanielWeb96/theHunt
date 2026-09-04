@@ -453,6 +453,22 @@ body {
   font-weight: 700;
 }
 
+.hud-ability-row {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.hud-ability-tag {
+  color: #38bdf8;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(56, 189, 248, 0.12);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
 .btn-ability {
   pointer-events: auto;
   width: 100%;
@@ -514,6 +530,22 @@ body {
 
 .hud-enemy-count {
   color: var(--accent-emerald);
+}
+
+.hud-wave-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auto-wave-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
 }
 
 .btn-wave-compact {
