@@ -342,11 +342,14 @@ body {
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   cursor: crosshair;
+  width: 864px;
+  height: 520px;
 }
 
-#game-canvas {
+.canvas-wrapper canvas {
+  width: 100% !important;
+  height: 100% !important;
   display: block;
-  image-rendering: pixelated;
 }
 
 /* Canvas overlay notification banner */

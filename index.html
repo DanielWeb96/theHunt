@@ -3,21 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Siege of Sanctum - Co-op Tower Defense</title>
+  <title>Dead Zone: Outpost 3D - Co-op Zombie Defense</title>
   <link rel="stylesheet" href="style.css">
+  <!-- Three.js 3D WebGL Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- Free P2P WebRTC Signaling via PeerJS -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
 
   <!-- ======================================================================
-       1. LOCK SCREEN (20-LETTER PASSWORD GATE)
+       1. LOCK SCREEN (SECURITY ACCESS GATE)
        ====================================================================== -->
   <div id="lock-screen" class="overlay-screen">
     <div class="modal-box">
-      <div class="modal-icon">🛡️</div>
-      <h1 class="modal-title">Siege of Sanctum</h1>
-      <p class="modal-subtitle">Protected Co-op Defense. Please enter the 20-letter security access key to enter.</p>
+      <div class="modal-icon">☣️</div>
+      <h1 class="modal-title">Dead Zone: Outpost 3D</h1>
+      <p class="modal-subtitle">Fortified Co-op Zombie Survival. Enter the security clearance key to enter.</p>
 
       <div class="input-wrapper">
         <input 
@@ -37,7 +39,7 @@
         <small>(Configured in <code>js/config.js</code>)</small>
       </div>
 
-      <button id="unlock-btn" class="btn-primary" disabled>Unlock Game Access</button>
+      <button id="unlock-btn" class="btn-primary" disabled>Unlock Outpost Terminal</button>
       <div id="lock-error" class="error-message"></div>
     </div>
   </div>
@@ -47,30 +49,30 @@
        ====================================================================== -->
   <div id="lobby-screen" class="overlay-screen hidden">
     <div class="modal-box">
-      <div class="modal-icon">⚔️</div>
-      <h2 class="modal-title">Multiplayer Lobby</h2>
-      <p class="modal-subtitle">Team up with friends via WebRTC to defend against the incoming hordes.</p>
+      <div class="modal-icon">📻</div>
+      <h2 class="modal-title">Survivor Outpost Network</h2>
+      <p class="modal-subtitle">Team up with friends via WebRTC to defend the blast bunker from the zombie horde.</p>
 
       <div class="input-wrapper">
         <input 
           type="text" 
           id="player-name-input" 
           class="styled-input" 
-          placeholder="Your Commander Name"
+          placeholder="Survivor Call-sign"
           maxlength="14"
-          value="Commander"
+          value="Survivor"
         >
       </div>
 
       <div class="lobby-options">
-        <button id="host-btn" class="btn-primary">👑 Host Co-op Match</button>
+        <button id="host-btn" class="btn-primary">👑 Host Co-op Outpost</button>
         
         <div class="join-group">
           <input 
             type="text" 
             id="join-room-input" 
             class="styled-input" 
-            placeholder="Room Code (e.g. TWR-742)"
+            placeholder="Room Code (e.g. ZOM-742)"
             maxlength="10"
           >
           <button id="join-btn" class="btn-primary">Join</button>
@@ -84,139 +86,137 @@
   </div>
 
   <!-- ======================================================================
-       3. ACTIVE GAME SCREEN
+       3. ACTIVE 3D GAME SCREEN
        ====================================================================== -->
   <div id="game-container" class="hidden">
     <!-- Top Status Bar -->
     <header class="top-bar">
       <div class="stat-group">
-        <div class="stat-badge lives" title="Base Health">
-          <span class="icon">❤️</span>
-          <span id="stat-lives">20</span>
+        <div class="stat-badge lives" title="Bunker Blast Door Integrity">
+          <span class="icon">🛡️</span>
+          <span>Bunker: <strong id="stat-lives">25</strong></span>
         </div>
-        <div class="stat-badge gold" title="Your Gold">
-          <span class="icon">🪙</span>
-          <span id="stat-gold">160</span>
+        <div class="stat-badge gold" title="Scrap Metal for Weapons">
+          <span class="icon">⚙️</span>
+          <span><strong id="stat-gold">180</strong> Scrap</span>
         </div>
-        <div class="stat-badge wave" title="Current Wave">
-          <span class="icon">🌊</span>
-          <span>Wave <span id="stat-wave">1</span></span>
+        <div class="stat-badge wave" title="Current Night">
+          <span class="icon">🌙</span>
+          <span>Night <strong id="stat-wave">1</strong></span>
         </div>
-        <div class="stat-badge enemies" title="Enemies on field">
-          <span class="icon">👾</span>
-          <span><span id="stat-enemies">0</span> Creeps</span>
+        <div class="stat-badge enemies" title="Active Zombies Detected">
+          <span class="icon">🧟</span>
+          <span><strong id="stat-enemies">0</strong> Zombies</span>
         </div>
       </div>
 
       <div class="session-info">
         <div id="room-info" class="room-badge hidden">
-          <span>Room: <strong id="display-room-code">----</strong></span>
+          <span>Outpost: <strong id="display-room-code">----</strong></span>
           <button id="copy-room-btn" class="copy-btn" title="Copy join link">Copy Link</button>
         </div>
         <div id="player-chips" class="player-chips">
-          <!-- Populated dynamically with connected friends -->
+          <!-- Populated dynamically with connected survivors -->
         </div>
       </div>
     </header>
 
     <!-- Main Gameplay Area -->
     <main class="game-layout">
-      <!-- 864 x 504 Canvas (24x14 grid @ 36px/cell) -->
-      <div class="canvas-wrapper">
-        <canvas id="game-canvas" width="864" height="504"></canvas>
-        <div id="canvas-banner" class="canvas-banner">Wave Incoming!</div>
+      <!-- 3D WebGL Three.js Container -->
+      <div id="canvas-wrapper" class="canvas-wrapper">
+        <div id="canvas-banner" class="canvas-banner">Night Approaching!</div>
       </div>
 
       <!-- Right Control Panel -->
       <aside class="control-panel">
-        <!-- Tower Arsenal -->
+        <!-- Turret Arsenal -->
         <section class="panel-card">
           <div class="panel-header">
-            <span>Arsenal</span>
+            <span>Anti-Horde Emplacements</span>
             <small style="font-size: 11px; text-transform: none; color: var(--text-muted)">Press [1-4]</small>
           </div>
           <div class="tower-grid">
-            <div class="tower-card" data-tower="archer">
+            <div class="tower-card" data-tower="sentry">
               <div class="tower-card-top">
-                <span class="tower-icon-badge">🏹</span>
+                <span class="tower-icon-badge">🔫</span>
                 <span class="tower-hotkey">[1]</span>
               </div>
-              <span class="tower-name">Archer Spire</span>
-              <span class="tower-cost">🪙 60</span>
+              <span class="tower-name">Sentry Minigun</span>
+              <span class="tower-cost">⚙️ 65</span>
             </div>
 
-            <div class="tower-card" data-tower="cannon">
+            <div class="tower-card" data-tower="flamethrower">
               <div class="tower-card-top">
-                <span class="tower-icon-badge">💣</span>
+                <span class="tower-icon-badge">🔥</span>
                 <span class="tower-hotkey">[2]</span>
               </div>
-              <span class="tower-name">Blast Cannon</span>
-              <span class="tower-cost">🪙 110</span>
+              <span class="tower-name">Incinerator</span>
+              <span class="tower-cost">⚙️ 115</span>
             </div>
 
-            <div class="tower-card" data-tower="frost">
+            <div class="tower-card" data-tower="cryo">
               <div class="tower-card-top">
                 <span class="tower-icon-badge">❄️</span>
                 <span class="tower-hotkey">[3]</span>
               </div>
-              <span class="tower-name">Frost Obelisk</span>
-              <span class="tower-cost">🪙 85</span>
+              <span class="tower-name">Cryo Pylon</span>
+              <span class="tower-cost">⚙️ 90</span>
             </div>
 
-            <div class="tower-card" data-tower="tesla">
+            <div class="tower-card" data-tower="rocket">
               <div class="tower-card-top">
-                <span class="tower-icon-badge">⚡</span>
+                <span class="tower-icon-badge">🚀</span>
                 <span class="tower-hotkey">[4]</span>
               </div>
-              <span class="tower-name">Storm Conductor</span>
-              <span class="tower-cost">🪙 160</span>
+              <span class="tower-name">Missile Silo</span>
+              <span class="tower-cost">⚙️ 175</span>
             </div>
           </div>
         </section>
 
-        <!-- Selected Tower Inspector -->
+        <!-- Selected Turret Inspector -->
         <section id="inspector-card" class="panel-card hidden">
           <div class="panel-header">
-            <span id="inspect-name">Tower Details</span>
+            <span id="inspect-name">Turret Diagnostics</span>
             <button id="close-inspect-btn" style="background:none;border:none;color:var(--text-muted);cursor:pointer;">✕</button>
           </div>
           <div class="inspector-details">
             <div>Level: <strong id="inspect-level" style="color:#fff">1</strong></div>
-            <div>Damage: <strong id="inspect-damage" style="color:#fff">15</strong></div>
-            <div>Range: <strong id="inspect-range" style="color:#fff">115</strong></div>
-            <div>Rate: <strong id="inspect-rate" style="color:#fff">0.5s</strong></div>
-            <div id="inspect-special" style="color:var(--accent-cyan)"></div>
+            <div>Damage: <strong id="inspect-damage" style="color:#fff">16</strong></div>
+            <div>Range: <strong id="inspect-range" style="color:#fff">15</strong></div>
+            <div>Rate: <strong id="inspect-rate" style="color:#fff">0.25s</strong></div>
           </div>
           <div class="inspector-actions">
-            <button id="upgrade-tower-btn" class="btn-inspect upgrade">Upgrade (🪙 50)</button>
-            <button id="sell-tower-btn" class="btn-inspect sell">Sell (+🪙 30)</button>
+            <button id="upgrade-tower-btn" class="btn-inspect upgrade">Upgrade (⚙️ 55)</button>
+            <button id="sell-tower-btn" class="btn-inspect sell">Dismantle (+⚙️ 35)</button>
           </div>
         </section>
 
         <!-- Wave Battle Controls -->
         <section class="panel-card">
           <div class="panel-header">
-            <span>Tactical Controls</span>
+            <span>Defense Status</span>
           </div>
           <div class="wave-actions">
-            <button id="start-wave-btn" class="btn-wave">🚀 Start Wave 1</button>
+            <button id="start-wave-btn" class="btn-wave">🚀 Trigger Night 1</button>
             <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); cursor: pointer; margin-top: 4px;">
-              <input type="checkbox" id="auto-wave-toggle"> Auto-start next waves
+              <input type="checkbox" id="auto-wave-toggle"> Auto-trigger next nights
             </label>
           </div>
         </section>
 
-        <!-- Team Co-op Chat -->
+        <!-- Team Radio Comms -->
         <section class="panel-card chat-container">
           <div class="panel-header">
-            <span>Co-op Comms</span>
-            <span style="font-size: 11px; color: var(--accent-emerald);">● Live</span>
+            <span>Radio Comms</span>
+            <span style="font-size: 11px; color: var(--accent-emerald);">● Encrypted</span>
           </div>
           <div id="chat-messages" class="chat-messages">
-            <div class="chat-msg system">Welcome! Coordinate builds with your team.</div>
+            <div class="chat-msg system">Radio link online. Coordinate turret placements with your team.</div>
           </div>
           <form id="chat-form" class="chat-input-row">
-            <input type="text" id="chat-input" class="chat-input" placeholder="Team message..." maxlength="80" autocomplete="off">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Transmit message..." maxlength="80" autocomplete="off">
             <button type="submit" class="btn-send">Send</button>
           </form>
         </section>
@@ -225,14 +225,14 @@
   </div>
 
   <!-- ======================================================================
-       4. GAME OVER / VICTORY MODAL
+       4. GAME OVER MODAL
        ====================================================================== -->
   <div id="game-over-modal" class="overlay-screen hidden">
     <div class="modal-box">
       <div id="game-over-icon" class="modal-icon">💀</div>
-      <h2 id="game-over-title" class="modal-title">Defeat</h2>
-      <p id="game-over-msg" class="modal-subtitle">The sanctum has fallen to the horde.</p>
-      <button id="restart-game-btn" class="btn-primary">Return to Lobby</button>
+      <h2 id="game-over-title" class="modal-title">Bunker Overrun</h2>
+      <p id="game-over-msg" class="modal-subtitle">The zombie horde broke through the blast doors.</p>
+      <button id="restart-game-btn" class="btn-primary">Return to Outpost Terminal</button>
     </div>
   </div>
 

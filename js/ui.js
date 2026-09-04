@@ -1,11 +1,11 @@
 // ============================================================================
-// UI CONTROLLER & EVENT WIRING
+// UI CONTROLLER & EVENT WIRING (3D ZOMBIE DEFENSE)
 // ============================================================================
 
 import { CONFIG } from "./config.js";
 import { sound } from "./audio.js";
 import { NetworkManager } from "./network.js";
-import { GameEngine } from "./game.js";
+import { GameEngine3D } from "./game3d.js";
 
 // DOM Elements
 const lockScreen = document.getElementById("lock-screen");
@@ -23,9 +23,9 @@ const soloBtn = document.getElementById("solo-btn");
 const lobbyError = document.getElementById("lobby-error");
 
 const gameContainer = document.getElementById("game-container");
-const canvas = document.getElementById("game-canvas");
+const canvasWrapper = document.getElementById("canvas-wrapper");
 const statLives = document.getElementById("stat-lives");
-const statGold = document.getElementById("stat-gold");
+const statScrap = document.getElementById("stat-gold");
 const statWave = document.getElementById("stat-wave");
 const statEnemies = document.getElementById("stat-enemies");
 const roomInfo = document.getElementById("room-info");
@@ -40,14 +40,12 @@ const inspectLevel = document.getElementById("inspect-level");
 const inspectDamage = document.getElementById("inspect-damage");
 const inspectRange = document.getElementById("inspect-range");
 const inspectRate = document.getElementById("inspect-rate");
-const inspectSpecial = document.getElementById("inspect-special");
 const upgradeTowerBtn = document.getElementById("upgrade-tower-btn");
 const sellTowerBtn = document.getElementById("sell-tower-btn");
 const closeInspectBtn = document.getElementById("close-inspect-btn");
 
 const startWaveBtn = document.getElementById("start-wave-btn");
 const autoWaveToggle = document.getElementById("auto-wave-toggle");
-const canvasBanner = document.getElementById("canvas-banner");
 
 const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
@@ -58,12 +56,12 @@ const gameOverTitle = document.getElementById("game-over-title");
 const gameOverMsg = document.getElementById("game-over-msg");
 const restartGameBtn = document.getElementById("restart-game-btn");
 
-// Instantiate subsystems
+// Instantiate 3D subsystems
 const network = new NetworkManager();
-const engine = new GameEngine(canvas, network);
+const engine = new GameEngine3D(canvasWrapper, network);
 
 // ----------------------------------------------------------------------------
-// 1. LOCK SCREEN (20-LETTER PASSWORD GATE)
+// 1. LOCK SCREEN (SECURITY ACCESS GATE)
 // ----------------------------------------------------------------------------
 function checkPasswordInput() {
   const val = passwordInput.value.trim();
@@ -90,24 +88,22 @@ unlockBtn.addEventListener("click", () => {
   sound.init();
   const entered = passwordInput.value.trim();
 
-  // Validate length
   if (entered.length !== CONFIG.PASSWORD_LENGTH) {
-    lockError.textContent = `Password must be exactly ${CONFIG.PASSWORD_LENGTH} letters (currently ${entered.length}).`;
+    lockError.textContent = `Password must be ${CONFIG.PASSWORD_LENGTH} characters (currently ${entered.length}).`;
     return;
   }
 
-  // Validate match against CONFIG.DEFAULT_PASSWORD
   if (entered.toLowerCase() !== CONFIG.DEFAULT_PASSWORD.toLowerCase()) {
-    lockError.textContent = "Incorrect security password. Please try again.";
+    lockError.textContent = "Incorrect access password. Please try again.";
     return;
   }
 
-  // Success: unlock gate
+  // Success: unlock
   lockError.textContent = "";
   lockScreen.classList.add("hidden");
   lobbyScreen.classList.remove("hidden");
 
-  // Check URL parameters for direct room join invitation (e.g. ?room=ABCD)
+  // Check URL parameters for direct room invitation (e.g. ?room=ABCD)
   const params = new URLSearchParams(window.location.search);
   const roomParam = params.get("room");
   if (roomParam) {
@@ -116,13 +112,13 @@ unlockBtn.addEventListener("click", () => {
 });
 
 // ----------------------------------------------------------------------------
-// 2. LOBBY ACTIONS
+// 2. MULTIPLAYER LOBBY
 // ----------------------------------------------------------------------------
 hostBtn.addEventListener("click", async () => {
   sound.init();
-  const name = playerNameInput.value.trim() || "Host Commander";
+  const name = playerNameInput.value.trim() || "Survivor Host";
   hostBtn.disabled = true;
-  hostBtn.textContent = "Creating Room...";
+  hostBtn.textContent = "Creating Outpost...";
 
   try {
     const code = await network.hostGame(name);
@@ -130,15 +126,15 @@ hostBtn.addEventListener("click", async () => {
     enterGame(code, true);
   } catch (err) {
     hostBtn.disabled = false;
-    hostBtn.textContent = "👑 Host Co-op Match";
-    lobbyError.textContent = "Failed to create room. Please retry.";
+    hostBtn.textContent = "👑 Host Co-op Outpost";
+    lobbyError.textContent = "Failed to establish room. Please retry.";
     console.error(err);
   }
 });
 
 joinBtn.addEventListener("click", async () => {
   sound.init();
-  const name = playerNameInput.value.trim() || "Defender";
+  const name = playerNameInput.value.trim() || "Survivor";
   const code = joinRoomInput.value.trim();
 
   if (!code) {
@@ -147,15 +143,15 @@ joinBtn.addEventListener("click", async () => {
   }
 
   joinBtn.disabled = true;
-  joinBtn.textContent = "Joining...";
+  joinBtn.textContent = "Connecting...";
 
   try {
     await network.joinGame(code, name);
     enterGame(code, false);
   } catch (err) {
     joinBtn.disabled = false;
-    joinBtn.textContent = "Join";
-    lobbyError.textContent = "Could not connect to room. Check code and ensure Host is online.";
+    joinBtn.textContent = "Join Outpost";
+    lobbyError.textContent = "Could not reach outpost. Verify code and ensure Host is online.";
     console.error(err);
   }
 });
@@ -164,7 +160,7 @@ soloBtn.addEventListener("click", () => {
   sound.init();
   network.isSolo = true;
   network.isHost = true;
-  network.playerName = playerNameInput.value.trim() || "Solo Defender";
+  network.playerName = playerNameInput.value.trim() || "Lone Survivor";
   network.myPeerId = "local_solo";
   network.players = [{
     id: "local_solo",
@@ -186,9 +182,19 @@ function enterGame(roomCode, isHost) {
   }
 
   updatePlayerChips();
+
+  // Resize 3D renderer to fit layout
+  setTimeout(() => {
+    const w = canvasWrapper.clientWidth;
+    const h = canvasWrapper.clientHeight;
+    engine.camera.aspect = w / h;
+    engine.camera.updateProjectionMatrix();
+    engine.renderer.setSize(w, h);
+  }, 50);
+
   engine.start();
 
-  // Start HUD update timer
+  // Periodic HUD update
   setInterval(updateHUD, 100);
 }
 
@@ -217,40 +223,40 @@ function updatePlayerChips() {
 network.onPlayerJoined = () => updatePlayerChips();
 network.onPlayerLeft = (p) => {
   updatePlayerChips();
-  addChatMessage("System", `${p.name} disconnected.`, "#94a3b8");
+  addChatMessage("Radio", `${p.name} lost signal.`, "#94a3b8");
 };
 
 // ----------------------------------------------------------------------------
 // 3. HUD UPDATES & CONTROLS
 // ----------------------------------------------------------------------------
 function updateHUD() {
-  statLives.textContent = engine.lives;
-  const localGold = engine.getLocalGold();
-  statGold.textContent = localGold;
+  statLives.textContent = engine.bunkerHealth;
+  const localScrap = engine.getLocalScrap();
+  statScrap.textContent = localScrap;
   statWave.textContent = engine.wave;
-  statEnemies.textContent = engine.creeps.length + engine.spawnQueue.length;
+  statEnemies.textContent = engine.zombies.length + engine.spawnQueue.length;
 
-  // Auto-wave triggering (Host only)
+  // Auto wave (Host only)
   if ((network.isHost || network.isSolo) && autoWaveToggle.checked) {
     if (engine.waveState === "idle" && engine.wave > 0) {
       engine.startNextWave();
     }
   }
 
-  // Update Wave button text
+  // Wave button state
   if (engine.waveState === "spawning" || engine.waveState === "active") {
     startWaveBtn.disabled = true;
-    startWaveBtn.textContent = `⚔️ Wave ${engine.wave} In Progress`;
+    startWaveBtn.textContent = `🧟 Night ${engine.wave} Active`;
   } else {
     startWaveBtn.disabled = false;
-    startWaveBtn.textContent = `🚀 Start Wave ${engine.wave + 1}`;
+    startWaveBtn.textContent = `🚀 Trigger Night ${engine.wave + 1}`;
   }
 
-  // Update tower purchase affordances
+  // Turret purchase affordances
   towerCards.forEach(card => {
     const type = card.dataset.tower;
-    const cfg = CONFIG.TOWERS[type];
-    if (cfg && localGold < cfg.cost) {
+    const cfg = CONFIG.TURRETS[type];
+    if (cfg && localScrap < cfg.cost) {
       card.classList.add("disabled");
     } else {
       card.classList.remove("disabled");
@@ -259,14 +265,14 @@ function updateHUD() {
 
   // Game over check
   if (engine.waveState === "gameover" && gameOverModal.classList.contains("hidden")) {
-    gameOverTitle.textContent = "Sanctum Defeated";
-    gameOverMsg.textContent = `You survived up to Wave ${engine.wave}. The horde overwhelmed your defenses!`;
+    gameOverTitle.textContent = "Bunker Overrun";
+    gameOverMsg.textContent = `You defended against the horde until Night ${engine.wave}. The zombies broke through the blast doors!`;
     gameOverModal.classList.remove("hidden");
   }
 
-  // Update inspected tower values if open
-  if (engine.inspectedTower) {
-    const t = engine.inspectedTower;
+  // Update inspected turret if open
+  if (engine.inspectedTurret) {
+    const t = engine.inspectedTurret;
     inspectName.textContent = `${t.name} (Lv. ${t.level})`;
     inspectLevel.textContent = t.level;
     inspectDamage.textContent = t.damage;
@@ -275,42 +281,75 @@ function updateHUD() {
 
     const upgradeCost = Math.round(t.cost * 0.85);
     const refund = Math.round(t.totalInvested * 0.65);
-    upgradeTowerBtn.textContent = `Upgrade (🪙 ${upgradeCost})`;
-    sellTowerBtn.textContent = `Sell (+🪙 ${refund})`;
-    upgradeTowerBtn.disabled = localGold < upgradeCost;
+    upgradeTowerBtn.textContent = `Upgrade (⚙️ ${upgradeCost})`;
+    sellTowerBtn.textContent = `Dismantle (+⚙️ ${refund})`;
+    upgradeTowerBtn.disabled = localScrap < upgradeCost;
   }
 }
 
 // ----------------------------------------------------------------------------
-// 4. ARSENAL & BUILDING INTERACTION
+// 4. TURRET SELECTION & INSPECTOR
 // ----------------------------------------------------------------------------
 towerCards.forEach(card => {
   card.addEventListener("click", () => {
     const type = card.dataset.tower;
-    if (engine.selectedTowerType === type) {
-      engine.selectedTowerType = null;
+    if (engine.selectedTurretType === type) {
+      engine.setPlacementType(null);
       card.classList.remove("selected");
     } else {
       towerCards.forEach(c => c.classList.remove("selected"));
-      engine.selectedTowerType = type;
-      engine.inspectedTower = null;
+      engine.setPlacementType(type);
+      engine.inspectedTurret = null;
       inspectorCard.classList.add("hidden");
       card.classList.add("selected");
     }
   });
 });
 
-// Hotkeys for towers
+// Inspection callback from 3D engine
+engine.onTurretInspected = (turret) => {
+  if (turret) {
+    inspectorCard.classList.remove("hidden");
+    updateHUD();
+  } else {
+    inspectorCard.classList.add("hidden");
+  }
+};
+
+closeInspectBtn.addEventListener("click", () => {
+  engine.inspectedTurret = null;
+  inspectorCard.classList.add("hidden");
+});
+
+upgradeTowerBtn.addEventListener("click", () => {
+  if (!engine.inspectedTurret) return;
+  network.sendCommand({
+    type: "UPGRADE_TURRET",
+    turretId: engine.inspectedTurret.id
+  });
+});
+
+sellTowerBtn.addEventListener("click", () => {
+  if (!engine.inspectedTurret) return;
+  network.sendCommand({
+    type: "DISMANTLE_TURRET",
+    turretId: engine.inspectedTurret.id
+  });
+  engine.inspectedTurret = null;
+  inspectorCard.classList.add("hidden");
+});
+
+// Keyboard hotkeys
 window.addEventListener("keydown", (e) => {
   if (e.target.tagName === "INPUT") return;
 
-  if (e.key === "1") selectTowerIndex(0);
-  if (e.key === "2") selectTowerIndex(1);
-  if (e.key === "3") selectTowerIndex(2);
-  if (e.key === "4") selectTowerIndex(3);
+  if (e.key === "1") selectTurret(0);
+  if (e.key === "2") selectTurret(1);
+  if (e.key === "3") selectTurret(2);
+  if (e.key === "4") selectTurret(3);
   if (e.key === "Escape") {
-    engine.selectedTowerType = null;
-    engine.inspectedTower = null;
+    engine.setPlacementType(null);
+    engine.inspectedTurret = null;
     towerCards.forEach(c => c.classList.remove("selected"));
     inspectorCard.classList.add("hidden");
   }
@@ -320,104 +359,11 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-function selectTowerIndex(idx) {
+function selectTurret(idx) {
   if (towerCards[idx]) {
     towerCards[idx].click();
   }
 }
-
-// Canvas Mouse Interactions
-canvas.addEventListener("mousemove", (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-
-  const mouseX = (e.clientX - rect.x) * scaleX;
-  const mouseY = (e.clientY - rect.y) * scaleY;
-
-  const col = Math.floor(mouseX / CONFIG.GRID.CELL_SIZE);
-  const row = Math.floor(mouseY / CONFIG.GRID.CELL_SIZE);
-
-  engine.hoverGrid = { col, row };
-
-  // Broadcast cursor to teammates (throttled)
-  network.sendCursor(Math.round(mouseX), Math.round(mouseY));
-});
-
-canvas.addEventListener("mouseleave", () => {
-  engine.hoverGrid = { col: -1, row: -1 };
-});
-
-canvas.addEventListener("click", (e) => {
-  const { col, row } = engine.hoverGrid;
-  if (col < 0 || row < 0) return;
-
-  // 1. If we are currently placing a tower
-  if (engine.selectedTowerType) {
-    const cfg = CONFIG.TOWERS[engine.selectedTowerType];
-    const localGold = engine.getLocalGold();
-
-    if (localGold < cfg.cost) {
-      showBanner("Not enough gold!");
-      return;
-    }
-
-    if (engine.grid[row] && engine.grid[row][col] !== null) {
-      showBanner("Cannot build on path or existing tower!");
-      return;
-    }
-
-    // Dispatch build command
-    network.sendCommand({
-      type: "BUILD_TOWER",
-      towerType: engine.selectedTowerType,
-      col,
-      row
-    });
-
-    // Deselect after placing
-    if (!e.shiftKey) {
-      engine.selectedTowerType = null;
-      towerCards.forEach(c => c.classList.remove("selected"));
-    }
-    return;
-  }
-
-  // 2. If clicking on an existing tower -> Inspect it
-  const clickedTower = engine.towers.find(t => t.col === col && t.row === row);
-  if (clickedTower) {
-    engine.inspectedTower = clickedTower;
-    inspectorCard.classList.remove("hidden");
-    updateHUD();
-  } else {
-    engine.inspectedTower = null;
-    inspectorCard.classList.add("hidden");
-  }
-});
-
-// Inspector buttons
-closeInspectBtn.addEventListener("click", () => {
-  engine.inspectedTower = null;
-  inspectorCard.classList.add("hidden");
-});
-
-upgradeTowerBtn.addEventListener("click", () => {
-  if (!engine.inspectedTower) return;
-  network.sendCommand({
-    type: "UPGRADE_TOWER",
-    towerId: engine.inspectedTower.id
-  });
-});
-
-sellTowerBtn.addEventListener("click", () => {
-  if (!engine.inspectedTower) return;
-  network.sendCommand({
-    type: "SELL_TOWER",
-    towerId: engine.inspectedTower.id
-  });
-  engine.inspectedTower = null;
-  inspectorCard.classList.add("hidden");
-});
 
 // Wave start button
 startWaveBtn.addEventListener("click", () => {
@@ -426,14 +372,8 @@ startWaveBtn.addEventListener("click", () => {
   });
 });
 
-function showBanner(text) {
-  canvasBanner.textContent = text;
-  canvasBanner.classList.add("show");
-  setTimeout(() => canvasBanner.classList.remove("show"), 2000);
-}
-
 // ----------------------------------------------------------------------------
-// 5. CHAT SYSTEM
+// 5. CHAT & COMMS
 // ----------------------------------------------------------------------------
 chatForm.addEventListener("submit", (e) => {
   e.preventDefault();

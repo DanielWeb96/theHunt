@@ -1,120 +1,125 @@
 // ============================================================================
-// GAME CONFIGURATION
+// 3D ZOMBIE DEFENSE - CONFIGURATION & BALANCING
 // ============================================================================
 
 export const CONFIG = {
   // --------------------------------------------------------------------------
-  // PASSWORD CONFIGURATION
+  // ACCESS PASSWORD (Your chosen custom password)
   // --------------------------------------------------------------------------
   DEFAULT_PASSWORD: "dakustowerGame69",
   PASSWORD_LENGTH: 16,
 
   // --------------------------------------------------------------------------
-  // GAMEPLAY BALANCING
+  // GAMEPLAY & BUNKER BALANCING
   // --------------------------------------------------------------------------
-  STARTING_LIVES: 20,
-  STARTING_GOLD: 160,
-  COOP_BOUNTY_SHARE_RATIO: 0.5, // When an enemy dies, non-killer teammates get 50% gold assist
+  BUNKER_HEALTH: 25,
+  STARTING_SCRAP: 180, // Gold / Currency renamed to "Scrap"
+  COOP_BOUNTY_SHARE_RATIO: 0.5,
 
-  // Grid dimensions for the map (24 columns x 14 rows, each cell is 36x36 px)
+  // 3D Grid dimensions (18x12 tiles, each tile is 4 units in Three.js)
   GRID: {
-    COLS: 24,
-    ROWS: 14,
-    CELL_SIZE: 36
+    COLS: 18,
+    ROWS: 12,
+    TILE_SIZE: 4
   },
 
   // --------------------------------------------------------------------------
-  // TOWERS SPECIFICATION
+  // ANTI-ZOMBIE TURRETS (3D WEAPONS)
   // --------------------------------------------------------------------------
-  TOWERS: {
-    archer: {
-      name: "Archer Spire",
-      cost: 60,
-      range: 115,
-      damage: 15,
-      fireRate: 0.5, // seconds per shot (2 shots/sec)
-      bulletSpeed: 7.5,
-      color: "#22c55e",
-      bulletColor: "#86efac",
-      icon: "🏹",
-      desc: "Rapid single-target physical arrows."
+  TURRETS: {
+    sentry: {
+      name: "Sentry Minigun",
+      cost: 65,
+      range: 15,
+      damage: 16,
+      fireRate: 0.25, // 4 shots/sec
+      bulletSpeed: 38,
+      color: "#f59e0b",
+      bulletColor: "#fbbf24",
+      icon: "🔫",
+      desc: "Rapid-fire twin rotary barrels shredding individual zombies."
     },
-    cannon: {
-      name: "Blast Cannon",
-      cost: 110,
-      range: 130,
-      damage: 42,
-      fireRate: 1.4, // slower fire rate
-      bulletSpeed: 5,
-      splashRadius: 52,
-      color: "#f97316",
-      bulletColor: "#fed7aa",
-      icon: "💣",
-      desc: "Heavy artillery dealing area-of-effect damage."
+    flamethrower: {
+      name: "Incinerator",
+      cost: 115,
+      range: 12,
+      damage: 32,
+      fireRate: 0.6,
+      splashRadius: 6,
+      bulletSpeed: 22,
+      color: "#ef4444",
+      bulletColor: "#f97316",
+      icon: "🔥",
+      desc: "Blasts pressurized napalm, igniting clusters of walking corpses."
     },
-    frost: {
-      name: "Frost Obelisk",
-      cost: 85,
-      range: 100,
-      damage: 6,
-      fireRate: 0.8,
-      bulletSpeed: 6,
-      slowFactor: 0.5, // slows to 50% speed
-      slowDuration: 2.5, // seconds
-      color: "#38bdf8",
-      bulletColor: "#bae6fd",
+    cryo: {
+      name: "Cryo Pylon",
+      cost: 90,
+      range: 13,
+      damage: 8,
+      fireRate: 0.75,
+      slowFactor: 0.45, // slows zombie to 45% speed
+      slowDuration: 2.8,
+      bulletSpeed: 28,
+      color: "#06b6d4",
+      bulletColor: "#67e8f9",
       icon: "❄️",
-      desc: "Chills enemies, cutting their speed in half."
+      desc: "Sub-zero liquid nitrogen emitter chilling and freezing the horde."
     },
-    tesla: {
-      name: "Storm Conductor",
-      cost: 160,
-      range: 125,
-      damage: 30,
-      fireRate: 1.0,
-      chainTargets: 3, // jumps to 3 enemies
-      color: "#a855f7",
-      bulletColor: "#e9d5ff",
-      icon: "⚡",
-      desc: "High-voltage chain lightning striking multiple foes."
+    rocket: {
+      name: "Missile Silo",
+      cost: 175,
+      range: 18,
+      damage: 75,
+      fireRate: 1.6,
+      splashRadius: 7.5,
+      bulletSpeed: 20,
+      color: "#8b5cf6",
+      bulletColor: "#c084fc",
+      icon: "🚀",
+      desc: "Heavy guided cluster rockets obliterating high-threat mutants."
     }
   },
 
   // --------------------------------------------------------------------------
-  // ENEMY TYPES
+  // ZOMBIE MUTATIONS (ENEMIES)
   // --------------------------------------------------------------------------
-  CREEPS: {
-    scout: {
-      name: "Scout Goblin",
-      hp: 45,
-      speed: 2.0,
-      reward: 12,
-      color: "#84cc16",
-      radius: 8
+  ZOMBIES: {
+    walker: {
+      name: "Decayed Shambler",
+      hp: 60,
+      speed: 1.2,
+      reward: 14,
+      color: "#4ade80",
+      bodyColor: "#335c3d",
+      scale: 1.0
     },
-    soldier: {
-      name: "Orc Raider",
-      hp: 110,
-      speed: 1.25,
-      reward: 20,
-      color: "#ef4444",
-      radius: 11
+    runner: {
+      name: "Infected Sprinter",
+      hp: 40,
+      speed: 2.6,
+      reward: 18,
+      color: "#f87171",
+      bodyColor: "#7f1d1d",
+      scale: 0.85
     },
-    knight: {
-      name: "Iron Golem",
-      hp: 310,
+    brute: {
+      name: "Armored Juggernaut",
+      hp: 340,
       speed: 0.75,
       reward: 45,
-      color: "#64748b",
-      radius: 14
+      color: "#94a3b8",
+      bodyColor: "#334155",
+      scale: 1.5
     },
-    boss: {
-      name: "Chaos Drake",
-      hp: 950,
-      speed: 0.6,
-      reward: 150,
-      color: "#e11d48",
-      radius: 18
+    titan: {
+      name: "Goliath Abomination",
+      hp: 1200,
+      speed: 0.55,
+      reward: 160,
+      color: "#c084fc",
+      bodyColor: "#581c87",
+      scale: 2.2
     }
   }
 };

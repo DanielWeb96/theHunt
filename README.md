@@ -1,14 +1,14 @@
-# Siege of Sanctum - Co-op Web Tower Defense
+# Dead Zone: Outpost 3D - Co-op Zombie Defense
 
-A real-time, browser-based co-op Tower Defense game designed to be played with friends. 
+A real-time, browser-based **3D Co-op Zombie Defense game** designed to be played with friends. 
 
-Built with pure HTML5 Canvas, JavaScript (ES Modules), Web Audio API, and **WebRTC (PeerJS)** for 100% free serverless multiplayer. Ready to host directly on **GitHub Pages**.
+Built with **Three.js (WebGL 3D)**, Web Audio API, and **WebRTC (PeerJS)** for 100% free serverless multiplayer. Ready to host directly on **GitHub Pages**.
 
 ---
 
 ## 🔒 Security Password Access
 
-Access to the game is protected by a security access key.
+Access to the game is protected by a security clearance key.
 
 * **Default Password:** `dakustowerGame69`
 * Anyone visiting your game must enter this password to unlock the lobby.
@@ -19,24 +19,28 @@ Open [js/config.js](file:///C:/Users/Daniel/Documents/DEV/Games/js/config.js) an
 DEFAULT_PASSWORD: "yournewpassword",
 PASSWORD_LENGTH: 16, // set to your password's length
 ```
-Save the file, and the game will immediately enforce your new 20-letter password.
 
 ---
 
-## 🎮 Game Features
+## 🎮 3D Game Features
 
-* **4 Distinct Towers:**
-  * 🏹 **Archer Spire** (🪙 60): High fire rate single-target damage.
-  * 💣 **Blast Cannon** (🪙 110): Artillery with area-of-effect splash damage.
-  * ❄️ **Frost Obelisk** (🪙 85): Chills creeps, reducing their speed by 50%.
-  * ⚡ **Storm Conductor** (🪙 160): Chain lightning strikes up to 3 targets.
-* **4 Enemy Types:** Scout Goblins (fast), Orc Raiders, Armored Golems (tanky), and Chaos Drakes (Bosses with massive HP).
+* **Isometric 3D Apocalyptic World:** Realistic dark fog, shadows, asphalt roads, ruined barricades, and a fortified survivor blast bunker.
+* **4 Anti-Zombie Weapon Emplacements:**
+  * 🔫 **Sentry Minigun** (⚙️ 65): Twin rotary barrels with rapid 3D tracer fire.
+  * 🔥 **Incinerator** (⚙️ 115): Pressurized napalm dealing area-of-effect fire damage.
+  * ❄️ **Cryo Pylon** (⚙️ 90): Liquid nitrogen emitter chilling and freezing zombies.
+  * 🚀 **Missile Silo** (⚙️ 175): Heavy cluster rockets with 3D explosive shockwaves.
+* **Procedural 3D Animated Zombies:**
+  * 🧟 **Decayed Shamblers**: Shambling limbs and glowing red eyes.
+  * 🏃 **Infected Sprinters**: Sprints at terrifying speeds.
+  * 🛡️ **Armored Juggernauts**: Heavy bullet sponges.
+  * 👹 **Goliath Abominations**: Colossal mutant bosses that spawn every 5 nights!
 * **Co-op Multiplayer (WebRTC P2P):**
-  * **Team Economy:** Killer gets full bounty; teammates receive a 50% co-op assist share!
-  * **Teammate Cursors:** See where your friends are aiming and planning to build in real time.
-  * **Shared Sanctum Health:** 20 collective lives.
-  * **In-game Team Comms:** Built-in chat log.
-* **Procedural Sound Engine:** Uses the browser's native Web Audio API (no missing sound files, works offline).
+  * **3D Holographic Cursors:** See where your teammates are aiming on the 3D ground in their team color!
+  * **Shared Bunker Integrity:** 25 blast door lives.
+  * **Scrap Economy:** Earn scrap metal from zombie kills + 50% assist share for teammates.
+  * **Radio Comms:** In-game live team chat.
+* **Procedural Sound Engine:** Minigun cracks, napalm roars, rocket booms, and zombie growls using Web Audio API.
 
 ---
 
