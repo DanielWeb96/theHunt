@@ -226,6 +226,65 @@ export class PixelGameEngine {
   }
 
   // --------------------------------------------------------------------------
+  // GAME LOOP
+  // --------------------------------------------------------------------------
+  start() {
+    this.lastTime = performance.now();
+    const loop = (time) => {
+      const dt = Math.min((time - this.lastTime) / 1000, 0.1);
+      this.lastTime = time;
+
+      this.update(dt);
+      this.render();
+
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+
+  update(dt) {
+    if (this.screenShake > 0) {
+      this.screenShake -= dt * 15;
+    }
+
+    this.updateLocalPlayer(dt);
+    this.updateCamera();
+    this.updateBullets(dt);
+    this.updateGrenades(dt);
+    this.updateTurrets(dt);
+    this.updateParticles(dt);
+    this.updateFloatingTexts(dt);
+
+    // Host & Solo authoritative updates
+    if (this.network.isHost || this.network.isSolo) {
+      this.updateSpawner(dt);
+      this.updateZombies(dt);
+
+      // Periodic state sync broadcast (18 updates/sec)
+      this.syncTimer += dt;
+      if (this.syncTimer >= 0.055) {
+        this.syncTimer = 0;
+        this.broadcastState();
+      }
+    } else {
+      // Client sends local position update to Host
+      this.syncTimer += dt;
+      if (this.syncTimer >= 0.05) {
+        this.syncTimer = 0;
+        this.network.sendAction({
+          type: "PLAYER_SYNC",
+          x: Math.round(this.myPlayer.x),
+          y: Math.round(this.myPlayer.y),
+          angle: Math.round(this.myPlayer.angle * 100) / 100,
+          hp: this.myPlayer.hp,
+          charClass: this.myPlayer.charClass,
+          isDowned: this.myPlayer.isDowned
+        });
+      }
+    }
+  }
+
+  // --------------------------------------------------------------------------
   // LOCAL PLAYER PHYSICS & COMBAT
   // --------------------------------------------------------------------------
   updateLocalPlayer(dt) {
