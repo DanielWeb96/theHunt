@@ -121,6 +121,10 @@ class SoundFX {
     } catch (e) {}
   }
 
+  bulletWallHit() {
+    this.playTone(110 + Math.random() * 40, "triangle", 0.04, 0.08);
+  }
+
   zombieHit() {
     this.playTone(220, "triangle", 0.05, 0.08);
   }

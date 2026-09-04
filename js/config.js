@@ -14,6 +14,44 @@ export const CONFIG = {
   },
 
   // --------------------------------------------------------------------------
+  // HOUSES & URBAN BUILDING HITBOXES (Solid walls for players, zombies, bullets)
+  // --------------------------------------------------------------------------
+  HOUSES: [
+    {
+      id: "house_northwest",
+      name: "Hardware Store & Northwest Block",
+      x: 0,
+      y: 0,
+      w: 750,
+      h: 730
+    },
+    {
+      id: "house_northeast",
+      name: "Deli & Northeast Block",
+      x: 1290,
+      y: 0,
+      w: 758,
+      h: 730
+    },
+    {
+      id: "house_southwest",
+      name: "Tenement & Southwest Block",
+      x: 0,
+      y: 1300,
+      w: 750,
+      h: 748
+    },
+    {
+      id: "house_southeast",
+      name: "Warehouse & Southeast Block",
+      x: 1290,
+      y: 1300,
+      w: 758,
+      h: 748
+    }
+  ],
+
+  // --------------------------------------------------------------------------
   // 5 PLAYABLE CHARACTER CLASSES
   // --------------------------------------------------------------------------
   CHARACTERS: {

@@ -41,6 +41,10 @@ export class PixelGameEngine {
       this.mapLoaded = true;
     }
 
+    // Houses & Urban Building Hitboxes
+    this.houses = CONFIG.HOUSES || [];
+    this.showHitboxes = false; // Toggle with 'H' for visual hitbox inspect
+
     // Local player state
     this.myPlayer = {
       id: "local",
@@ -112,6 +116,10 @@ export class PixelGameEngine {
         e.preventDefault();
         this.triggerAbility();
       }
+      // Toggle Hitbox debug outline on H
+      if (e.key.toLowerCase() === "h") {
+        this.showHitboxes = !this.showHitboxes;
+      }
     });
 
     window.addEventListener("keyup", (e) => {
@@ -152,63 +160,68 @@ export class PixelGameEngine {
     this.myPlayer.maxAmmo = cfg.magSize;
     this.myPlayer.x = this.worldWidth / 2 + (Math.random() - 0.5) * 80;
     this.myPlayer.y = this.worldHeight / 2 + (Math.random() - 0.5) * 80;
+    this.resolveHouseCollisions(this.myPlayer, 16);
   }
 
   // --------------------------------------------------------------------------
-  // GAME LOOP
+  // HOUSE HITBOX COLLISION SYSTEM
   // --------------------------------------------------------------------------
-  start() {
-    const loop = (time) => {
-      const dt = Math.min((time - this.lastTime) / 1000, 0.1);
-      this.lastTime = time;
-
-      this.update(dt);
-      this.render();
-
-      requestAnimationFrame(loop);
-    };
-    requestAnimationFrame(loop);
-  }
-
-  update(dt) {
-    if (this.screenShake > 0) {
-      this.screenShake -= dt * 15;
+  checkHouseCollision(x, y, radius = 14) {
+    for (const b of this.houses) {
+      const closestX = Math.max(b.x, Math.min(x, b.x + b.w));
+      const closestY = Math.max(b.y, Math.min(y, b.y + b.h));
+      const dx = x - closestX;
+      const dy = y - closestY;
+      if (dx * dx + dy * dy < radius * radius) {
+        return true;
+      }
     }
+    return false;
+  }
 
-    this.updateLocalPlayer(dt);
-    this.updateCamera();
-    this.updateBullets(dt);
-    this.updateGrenades(dt);
-    this.updateTurrets(dt);
-    this.updateParticles(dt);
-    this.updateFloatingTexts(dt);
+  resolveHouseCollisions(entity, radius = 14) {
+    for (const b of this.houses) {
+      const closestX = Math.max(b.x, Math.min(entity.x, b.x + b.w));
+      const closestY = Math.max(b.y, Math.min(entity.y, b.y + b.h));
+      const dx = entity.x - closestX;
+      const dy = entity.y - closestY;
+      const distSq = dx * dx + dy * dy;
 
-    // Host & Solo authoritative updates
-    if (this.network.isHost || this.network.isSolo) {
-      this.updateSpawner(dt);
-      this.updateZombies(dt);
+      if (distSq < radius * radius) {
+        const dist = Math.sqrt(distSq);
+        if (dist > 0.001) {
+          const overlap = radius - dist;
+          entity.x += (dx / dist) * overlap;
+          entity.y += (dy / dist) * overlap;
+        } else {
+          // Entity center is inside the house box: push to nearest exterior edge
+          const distLeft = entity.x - b.x;
+          const distRight = (b.x + b.w) - entity.x;
+          const distTop = entity.y - b.y;
+          const distBottom = (b.y + b.h) - entity.y;
+          const minDist = Math.min(distLeft, distRight, distTop, distBottom);
 
-      // Periodic state sync broadcast (18 updates/sec)
-      this.syncTimer += dt;
-      if (this.syncTimer >= 0.055) {
-        this.syncTimer = 0;
-        this.broadcastState();
+          if (minDist === distLeft) entity.x = b.x - radius;
+          else if (minDist === distRight) entity.x = b.x + b.w + radius;
+          else if (minDist === distTop) entity.y = b.y - radius;
+          else entity.y = b.y + b.h + radius;
+        }
       }
-    } else {
-      // Client sends local position update to Host
-      this.syncTimer += dt;
-      if (this.syncTimer >= 0.05) {
-        this.syncTimer = 0;
-        this.network.sendAction({
-          type: "PLAYER_SYNC",
-          x: Math.round(this.myPlayer.x),
-          y: Math.round(this.myPlayer.y),
-          angle: Math.round(this.myPlayer.angle * 100) / 100,
-          hp: this.myPlayer.hp,
-          charClass: this.myPlayer.charClass,
-          isDowned: this.myPlayer.isDowned
-        });
-      }
+    }
+  }
+
+  spawnWallHitParticles(x, y) {
+    for (let i = 0; i < 7; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 35 + Math.random() * 65;
+      this.particles.push({
+        x, y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        radius: 1.5 + Math.random() * 2,
+        color: Math.random() < 0.35 ? "#f59e0b" : Math.random() < 0.7 ? "#94a3b8" : "#e2e8f0",
+        life: 0.2 + Math.random() * 0.15
+      });
     }
   }
 
@@ -235,8 +248,21 @@ export class PixelGameEngine {
     }
 
     const moveSpeed = cfg.speed * 60; // pixels per second
-    p.x = Math.max(32, Math.min(this.worldWidth - 32, p.x + mx * moveSpeed * dt));
-    p.y = Math.max(32, Math.min(this.worldHeight - 32, p.y + my * moveSpeed * dt));
+    const pRadius = 14;
+
+    // Move X axis (with smooth house wall sliding)
+    if (mx !== 0) {
+      p.x += mx * moveSpeed * dt;
+      p.x = Math.max(pRadius, Math.min(this.worldWidth - pRadius, p.x));
+      this.resolveHouseCollisions(p, pRadius);
+    }
+
+    // Move Y axis (with smooth house wall sliding)
+    if (my !== 0) {
+      p.y += my * moveSpeed * dt;
+      p.y = Math.max(pRadius, Math.min(this.worldHeight - pRadius, p.y));
+      this.resolveHouseCollisions(p, pRadius);
+    }
 
     // Aim angle towards mouse cursor
     this.mouse.worldX = this.mouse.screenX + this.camera.x - this.width / 2;
@@ -424,6 +450,15 @@ export class PixelGameEngine {
       b.y += b.vy * dt;
       b.life -= dt;
 
+      // Check collision with solid house walls
+      if (this.checkHouseCollision(b.x, b.y, 5)) {
+        this.spawnWallHitParticles(b.x, b.y);
+        sound.bulletWallHit();
+        b.life = 0;
+        this.bullets.splice(i, 1);
+        continue;
+      }
+
       // Check collision with zombies (Host or Solo)
       if (this.network.isHost || this.network.isSolo) {
         for (let j = this.zombies.length - 1; j >= 0; j--) {
@@ -455,6 +490,11 @@ export class PixelGameEngine {
       // Fly towards target
       g.x += (g.targetX - g.x) * 4 * dt;
       g.y += (g.targetY - g.y) * 4 * dt;
+
+      // Detonate immediately if grenade impacts house wall
+      if (this.checkHouseCollision(g.x, g.y, 8)) {
+        g.timer = 0;
+      }
 
       if (g.timer <= 0) {
         // Boom!
@@ -575,13 +615,26 @@ export class PixelGameEngine {
     const base = CONFIG.ZOMBIES[typeKey] || CONFIG.ZOMBIES.walker;
     const hpScale = 1 + (this.wave - 1) * 0.14;
 
-    // Pick a random edge point around the big map
-    const edge = Math.floor(Math.random() * 4);
+    // Spawn zombies at the 4 street avenues entering the city
+    const entrance = Math.floor(Math.random() * 4);
     let x, y;
-    if (edge === 0) { x = Math.random() * this.worldWidth; y = 20; }
-    else if (edge === 1) { x = this.worldWidth - 20; y = Math.random() * this.worldHeight; }
-    else if (edge === 2) { x = Math.random() * this.worldWidth; y = this.worldHeight - 20; }
-    else { x = 20; y = Math.random() * this.worldHeight; }
+    if (entrance === 0) {
+      // North Avenue (between northwest and northeast houses)
+      x = 800 + Math.random() * 440;
+      y = 20;
+    } else if (entrance === 1) {
+      // South Boulevard (between southwest and southeast houses)
+      x = 800 + Math.random() * 440;
+      y = this.worldHeight - 20;
+    } else if (entrance === 2) {
+      // West Street (between northwest and southwest houses)
+      x = 20;
+      y = 780 + Math.random() * 480;
+    } else {
+      // East Highway (between northeast and southeast houses)
+      x = this.worldWidth - 20;
+      y = 780 + Math.random() * 480;
+    }
 
     const zombie = {
       id: "zomb_" + Math.random().toString(36).substr(2, 9),
@@ -600,6 +653,7 @@ export class PixelGameEngine {
       animTime: Math.random() * 10
     };
 
+    this.resolveHouseCollisions(zombie, zombie.radius);
     this.zombies.push(zombie);
     sound.zombieGroan();
   }
@@ -625,8 +679,18 @@ export class PixelGameEngine {
 
       if (closest) {
         z.angle = Math.atan2(closest.y - z.y, closest.x - z.x);
-        z.x += Math.cos(z.angle) * z.speed * dt;
-        z.y += Math.sin(z.angle) * z.speed * dt;
+        const vx = Math.cos(z.angle) * z.speed;
+        const vy = Math.sin(z.angle) * z.speed;
+
+        // Move X with house collision (smooth wall-sliding around building corners)
+        z.x += vx * dt;
+        z.x = Math.max(z.radius, Math.min(this.worldWidth - z.radius, z.x));
+        this.resolveHouseCollisions(z, z.radius);
+
+        // Move Y with house collision
+        z.y += vy * dt;
+        z.y = Math.max(z.radius, Math.min(this.worldHeight - z.radius, z.y));
+        this.resolveHouseCollisions(z, z.radius);
 
         // Attack player on contact
         if (minDist < z.radius + 14) {
@@ -897,6 +961,23 @@ export class PixelGameEngine {
     ctx.lineWidth = 4;
     ctx.strokeRect(0, 0, this.worldWidth, this.worldHeight);
 
+    // Debug: Draw House Hitbox Outlines (Toggle with H)
+    if (this.showHitboxes) {
+      ctx.save();
+      ctx.strokeStyle = "#f43f5e";
+      ctx.lineWidth = 3;
+      ctx.fillStyle = "rgba(244, 63, 94, 0.22)";
+      ctx.font = "bold 13px monospace";
+      for (const h of this.houses) {
+        ctx.fillRect(h.x, h.y, h.w, h.h);
+        ctx.strokeRect(h.x, h.y, h.w, h.h);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(`🏠 ${h.name} [HITBOX]`, h.x + 20, h.y + 36);
+        ctx.fillStyle = "rgba(244, 63, 94, 0.22)";
+      }
+      ctx.restore();
+    }
+
     // 2. Draw Blood Splatters on Ground
     ctx.fillStyle = "rgba(185, 28, 28, 0.4)";
     for (const bs of this.bloodSplats) {
@@ -1106,12 +1187,14 @@ export class PixelGameEngine {
     const midY = this.worldHeight / 2;
     const roadW = 280;
 
-    // Building blocks in 4 quadrants
+    // Building blocks in 4 quadrants (matching exact house hitboxes)
     ctx.fillStyle = "#14171f";
-    ctx.fillRect(40, 40, midX - roadW / 2 - 60, midY - roadW / 2 - 60);
-    ctx.fillRect(midX + roadW / 2 + 20, 40, midX - roadW / 2 - 60, midY - roadW / 2 - 60);
-    ctx.fillRect(40, midY + roadW / 2 + 20, midX - roadW / 2 - 60, midY - roadW / 2 - 60);
-    ctx.fillRect(midX + roadW / 2 + 20, midY + roadW / 2 + 20, midX - roadW / 2 - 60, midY - roadW / 2 - 60);
+    ctx.strokeStyle = "#334155";
+    ctx.lineWidth = 2;
+    for (const h of this.houses) {
+      ctx.fillRect(h.x, h.y, h.w, h.h);
+      ctx.strokeRect(h.x, h.y, h.w, h.h);
+    }
 
     // Sidewalk curbs
     ctx.fillStyle = "#374151";
@@ -1154,6 +1237,14 @@ export class PixelGameEngine {
     ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
     ctx.fillRect(miniX, miniY, miniSize, miniSize);
 
+    const scale = miniSize / this.worldWidth;
+
+    // Draw building footprints on minimap
+    ctx.fillStyle = "rgba(30, 41, 59, 0.75)";
+    for (const h of this.houses) {
+      ctx.fillRect(miniX + h.x * scale, miniY + h.y * scale, h.w * scale, h.h * scale);
+    }
+
     const isMapReady = this.mapLoaded || (this.mapImage.complete && this.mapImage.naturalWidth > 0);
     if (isMapReady) {
       ctx.globalAlpha = 0.55;
@@ -1164,8 +1255,6 @@ export class PixelGameEngine {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
     ctx.lineWidth = 2;
     ctx.strokeRect(miniX, miniY, miniSize, miniSize);
-
-    const scale = miniSize / this.worldWidth;
 
     // Zombies (Red dots)
     ctx.fillStyle = "#ef4444";
