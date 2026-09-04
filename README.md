@@ -10,7 +10,7 @@ Built with pure HTML5 Canvas, JavaScript (ES Modules), Web Audio API, and **WebR
 
 Access to the game is protected by a strict **20-letter security access key**.
 
-* **Default Password:** `cooptowerdefensepass` (exactly 20 letters)
+* **Default Password:** `` (exactly 20 letters)
 * Anyone visiting your game must enter this password to unlock the lobby.
 
 ### How to Change the Password:
