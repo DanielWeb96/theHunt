@@ -57,7 +57,8 @@ Generated with **Nano Banana** for character sprites and urban battlefield art.
 
 ## 🌐 How to Play on GitHub Pages
 
-1. Open your game link: **`https://danielweb96.github.io/towerTower/`**
-2. Enter the password: **`dakustowerGame69`**
-3. Select your character class and click **👑 Host Co-op Match** (or join with room code).
-4. Share the room link with your friends and defend the urban outpost together!
+1. Enable GitHub Pages: In your repository **[Settings → Pages](https://github.com/DanielWeb96/theHunt/settings/pages)**, set Source to `main` branch and `/ (root)`, then click Save.
+2. Open your live game link: **`https://danielweb96.github.io/theHunt/`**
+3. Enter the password: **`dakustowerGame69`**
+4. Select your character class and click **👑 Host Co-op Match** (or join with room code).
+5. Share the room link with your friends and defend the urban outpost together!
