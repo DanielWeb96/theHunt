@@ -1312,10 +1312,10 @@ export class PixelGameEngine {
     ctx.save();
     ctx.translate(p.x, p.y);
 
-    // 1. Drop Shadow underneath survivor
-    ctx.fillStyle = "rgba(0, 0, 0, 0.42)";
+    // 1. Soft Ambient Drop Shadow on Asphalt
+    ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
     ctx.beginPath();
-    ctx.ellipse(0, 8, 17, 9, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 4, 22, 15, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Downed state
@@ -1325,6 +1325,7 @@ export class PixelGameEngine {
       ctx.arc(0, 0, 26 + Math.sin(Date.now() * 0.008) * 4, 0, Math.PI * 2);
       ctx.fill();
 
+      // Prone human body
       ctx.save();
       ctx.rotate(p.angle + Math.PI / 2);
       ctx.fillStyle = "#1e293b";
@@ -1336,213 +1337,456 @@ export class PixelGameEngine {
       ctx.font = "bold 10px monospace";
       ctx.fillStyle = "#ef4444";
       ctx.textAlign = "center";
-      ctx.fillText("⚠️ DOWNED - REVIVE [SPACE]!", 0, -24);
+      ctx.fillText("⚠️ DOWNED - REVIVE [SPACE]!", 0, -32);
       ctx.restore();
       return;
     }
 
-    // 2. Animated Walking Boots (stepping underneath the player)
+    // ------------------------------------------------------------------------
+    // TOP-DOWN HUMAN PERSON SPRITE (Rotated to aim direction)
+    // ------------------------------------------------------------------------
     ctx.save();
     ctx.rotate(p.angle);
+    ctx.scale(1.28, 1.28); // Heroic arcade scale for clear character silhouette
 
-    const stepOffset = isMoving ? Math.sin(walkAnim) * 5 : 0;
-    ctx.fillStyle = "#1e293b"; // tactical military boots
-    ctx.fillRect(-9, -12 + stepOffset, 5, 8);
-    ctx.fillRect(-9, 4 - stepOffset, 5, 8);
+    const recoil = (p.fireCooldown > 0) ? -3.5 : 0;
+    const step = isMoving ? Math.sin(walkAnim) * 7 : 0;
 
-    // 3. Hands & Weapon extending forward in aim direction
-    const recoil = (p.fireCooldown > 0) ? -3 : 0;
-
+    // STEP 1: WALKING LEGS & COMBAT BOOTS
+    let pantsCol = "#3f4a36"; // Commando olive
+    let bootCol = "#111827";
     if (p.charClass === "sniper") {
-      // Long Barrett .50 Cal Sniper
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(8 + recoil, 1, 26, 3.5); // long heavy barrel
-      ctx.fillStyle = "#334155";
-      ctx.fillRect(6 + recoil, -0.5, 12, 5); // receiver
-      ctx.fillStyle = "#38bdf8";
-      ctx.fillRect(10 + recoil, -3, 8, 2.5); // high-magnification scope
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(32 + recoil, 0, 4, 5.5); // muzzle brake
+      pantsCol = "#1e293b";
+      bootCol = "#0f172a";
+    } else if (p.charClass === "medic") {
+      pantsCol = "#334155";
+      bootCol = "#1e293b";
+    } else if (p.charClass === "heavy") {
+      pantsCol = "#293241";
+      bootCol = "#0f172a";
+    } else if (p.charClass === "engineer") {
+      pantsCol = "#573a1e";
+      bootCol = "#38220f";
+    }
 
-      // Tactical blue laser sight beam
-      ctx.save();
-      ctx.strokeStyle = "rgba(56, 189, 248, 0.45)";
-      ctx.lineWidth = 1.2;
-      ctx.setLineDash([6, 6]);
+    // Left leg & boot
+    ctx.fillStyle = pantsCol;
+    ctx.fillRect(-13 - step, -11, 11, 6);
+    ctx.fillStyle = bootCol;
+    ctx.fillRect(-6 - step, -11.5, 6, 7);
+
+    // Right leg & boot
+    ctx.fillStyle = pantsCol;
+    ctx.fillRect(-13 + step, 5, 11, 6);
+    ctx.fillStyle = bootCol;
+    ctx.fillRect(-6 + step, 4.5, 6, 7);
+
+    // STEP 2: CLASS-SPECIFIC TORSO, SHOULDERS & GEAR
+    if (p.charClass === "commando") {
+      // Commando Military Camo Vest & Radio Pack
+      // Backpack / radio on rear
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(-13, -7, 6, 14);
+      // Radio antenna
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(-16, -9, 4, 1.5);
+
+      // Shoulders & Torso
+      ctx.fillStyle = "#2d3b26"; // olive drab vest
       ctx.beginPath();
-      ctx.moveTo(34 + recoil, 2.7);
-      ctx.lineTo(400, 2.7);
+      ctx.roundRect(-8, -12, 17, 24, 4);
+      ctx.fill();
+
+      // Chest ammo mag pouches
+      ctx.fillStyle = "#41533b";
+      ctx.fillRect(0, -9, 6, 5);
+      ctx.fillRect(0, -2, 6, 5);
+      ctx.fillRect(0, 5, 6, 5);
+
+      // Commando Camo Combat Helmet
+      ctx.fillStyle = "#3f4a36";
+      ctx.beginPath();
+      ctx.arc(1, 0, 7.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Camo splotches
+      ctx.fillStyle = "#283624";
+      ctx.fillRect(-2, -3, 5, 4);
+      // NVG Mount
+      ctx.fillStyle = "#111827";
+      ctx.fillRect(6, -2, 3, 4);
+      // Headset earmuffs
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(0, -8.5, 4, 2);
+      ctx.fillRect(0, 6.5, 4, 2);
+
+      // Arms & M4A1 Assault Rifle
+      ctx.fillStyle = "#3f4a36";
+      // Right arm to trigger
+      ctx.fillRect(-2, 6, 12, 5);
+      // Left arm forward to foregrip
+      ctx.beginPath();
+      ctx.moveTo(-2, -10);
+      ctx.lineTo(16 + recoil, -3);
+      ctx.lineTo(14 + recoil, 1);
+      ctx.lineTo(-4, -6);
+      ctx.closePath();
+      ctx.fill();
+
+      // Hands
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(8 + recoil, 4, 4, 4);
+      ctx.fillRect(15 + recoil, -3, 4, 4);
+
+      // M4A1 Rifle
+      ctx.fillStyle = "#111827";
+      ctx.fillRect(1 + recoil, 3.5, 8, 4); // stock
+      ctx.fillRect(9 + recoil, 2.5, 10, 4.5); // receiver
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(11 + recoil, 0.5, 5, 2.5); // optic sight
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(13 + recoil, 6.5, 3, 5); // curved mag
+      ctx.fillStyle = "#41533b";
+      ctx.fillRect(18 + recoil, 3, 7, 3.5); // camo handguard
+      ctx.fillStyle = "#111827";
+      ctx.fillRect(25 + recoil, 3.5, 6, 2.5); // barrel & flash hider
+
+    } else if (p.charClass === "sniper") {
+      // Sniper Dark Cloak & Barrett .50 Cal
+      // Back ghillie roll
+      ctx.fillStyle = "#121814";
+      ctx.fillRect(-14, -8, 6, 16);
+
+      // Dark shrouded cloak over shoulders
+      ctx.fillStyle = "#18201a";
+      ctx.beginPath();
+      ctx.roundRect(-9, -13, 18, 26, 6);
+      ctx.fill();
+
+      // Cloak folds / highlights
+      ctx.strokeStyle = "#28362b";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-8, -8); ctx.lineTo(2, -11);
+      ctx.moveTo(-8, 8); ctx.lineTo(2, 11);
+      ctx.stroke();
+
+      // Dark Hood pulled forward
+      ctx.fillStyle = "#141a16";
+      ctx.beginPath();
+      ctx.arc(1, 0, 7.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glowing Green NVG Optics (Dual Night Vision)
+      ctx.fillStyle = "#22c55e";
+      ctx.fillRect(6, -3.5, 3, 2.5);
+      ctx.fillRect(6, 1, 3, 2.5);
+      ctx.fillStyle = "#86efac";
+      ctx.fillRect(7, -3, 1.5, 1.5);
+      ctx.fillRect(7, 1.5, 1.5, 1.5);
+
+      // Arms & Barrett .50 Cal Sniper
+      ctx.fillStyle = "#18201a";
+      ctx.fillRect(-2, 7, 11, 5);
+      ctx.beginPath();
+      ctx.moveTo(-2, -11);
+      ctx.lineTo(18 + recoil, -4);
+      ctx.lineTo(16 + recoil, 0);
+      ctx.lineTo(-4, -7);
+      ctx.closePath();
+      ctx.fill();
+
+      // Hands
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(7 + recoil, 5, 4, 4);
+      ctx.fillRect(17 + recoil, -3, 4, 4);
+
+      // Barrett .50 Cal Sniper Rifle
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(0 + recoil, 3, 8, 4); // stock
+      ctx.fillRect(7 + recoil, 2, 14, 5.5); // heavy receiver
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(10 + recoil, -1.5, 11, 3.5); // sniper scope
+      ctx.fillStyle = "#38bdf8";
+      ctx.fillRect(19 + recoil, -1, 2, 2.5); // scope lens
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(20 + recoil, 3, 18, 3.2); // long heavy barrel
+      ctx.fillRect(36 + recoil, 1.5, 5, 6); // massive muzzle brake
+
+      // Tactical Cyan Laser Sight Beam
+      ctx.save();
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.65)";
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([8, 6]);
+      ctx.beginPath();
+      ctx.moveTo(40 + recoil, 3);
+      ctx.lineTo(440, 3);
       ctx.stroke();
       ctx.restore();
-    } else if (p.charClass === "medic") {
-      // Dual Vector SMGs
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(8 + recoil, -8, 14, 4); // top SMG
-      ctx.fillRect(8 + recoil, 5, 14, 4);  // bottom SMG
-      ctx.fillStyle = "#f43f5e";
-      ctx.fillRect(10 + recoil, -9, 4, 2); // red dot sights
-      ctx.fillRect(10 + recoil, 8, 4, 2);
-    } else if (p.charClass === "heavy") {
-      // SPAS-12 Heavy Shotgun with hazard styling
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(6 + recoil, -2, 20, 6.5); // wide receiver & barrel
-      ctx.fillStyle = "#f59e0b";
-      ctx.fillRect(8 + recoil, 0, 7, 3);    // hazard amber accents
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(14 + recoil, 4, 4, 4);   // shotgun tube magazine
-    } else if (p.charClass === "engineer") {
-      // Riot Carbine & Shoulder Turret Sensor
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(8 + recoil, 0, 18, 4);
-      ctx.fillStyle = "#a855f7";
-      ctx.fillRect(12 + recoil, -2, 5, 2); // tech holographic optic
 
-      // Subtle flashlight cone
-      const grad = ctx.createRadialGradient(24, 2, 4, 180, 2, 80);
+    } else if (p.charClass === "medic") {
+      // Combat Field Medic (Dr. Elena) with Red Cross & Dual SMGs
+      // Medical Trauma Backpack on rear with Red Cross
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(-14, -8, 6, 16);
+      // White patch with Red Cross
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(-13, -4, 4, 8);
+      ctx.fillStyle = "#ef4444";
+      ctx.fillRect(-13, -1, 4, 2);
+      ctx.fillRect(-12, -3, 2, 6);
+
+      // White & Light-Grey Tactical Jacket
+      ctx.fillStyle = "#e2e8f0";
+      ctx.beginPath();
+      ctx.roundRect(-8, -11, 16, 22, 4);
+      ctx.fill();
+
+      // Red medical stripes on shoulders
+      ctx.fillStyle = "#ef4444";
+      ctx.fillRect(-4, -11.5, 6, 2.5);
+      ctx.fillRect(-4, 9, 6, 2.5);
+
+      // Head with high ponytail & headband
+      // Brunette hair
+      ctx.fillStyle = "#451a03";
+      ctx.beginPath();
+      ctx.arc(0, 0, 7, 0, Math.PI * 2);
+      ctx.fill();
+      // High combat ponytail extending backward with gentle motion sway
+      const hairSway = isMoving ? Math.sin(walkAnim * 1.5) * 3 : 0;
+      ctx.beginPath();
+      ctx.ellipse(-10, hairSway, 6, 3.5, -0.15, 0, Math.PI * 2);
+      ctx.fill();
+      // Tactical headband
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(-2, -6, 3, 12);
+      // Comms headset
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(-1, 5.5, 3, 2);
+
+      // Dual Vector SMGs (Akimbo Arms)
+      ctx.fillStyle = "#cbd5e1"; // jacket sleeves
+      ctx.fillRect(-2, -10, 10, 4.5);
+      ctx.fillRect(-2, 5.5, 10, 4.5);
+
+      // Hands
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(7 + recoil, -10, 3.5, 4);
+      ctx.fillRect(7 + recoil, 5.5, 3.5, 4);
+
+      // Top Vector SMG
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(7 + recoil, -11, 13, 4.5);
+      ctx.fillStyle = "#ef4444";
+      ctx.fillRect(10 + recoil, -12.5, 3, 2); // red dot
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(11 + recoil, -6.5, 3, 4); // mag
+
+      // Bottom Vector SMG
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(7 + recoil, 5.5, 13, 4.5);
+      ctx.fillStyle = "#ef4444";
+      ctx.fillRect(10 + recoil, 4, 3, 2); // red dot
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(11 + recoil, 10, 3, 4); // mag
+
+    } else if (p.charClass === "heavy") {
+      // Heavy Blast Demolitionist with Hazard Shoulders & SPAS-12 Shotgun
+      // Ammo canister drum pack on back
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(-15, -9, 7, 18);
+
+      // Massive 26px Broad Blast Armor
+      ctx.fillStyle = "#293241";
+      ctx.beginPath();
+      ctx.roundRect(-9, -14, 18, 28, 5);
+      ctx.fill();
+
+      // Yellow & Black Hazard Stripes on Shoulder Pauldrons
+      // Left shoulder hazard stripes
+      ctx.fillStyle = "#eab308";
+      ctx.fillRect(-5, -14, 10, 5);
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(-3, -14, 2.5, 5);
+      ctx.fillRect(2, -14, 2.5, 5);
+
+      // Right shoulder hazard stripes
+      ctx.fillStyle = "#eab308";
+      ctx.fillRect(-5, 9, 10, 5);
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(-3, 9, 2.5, 5);
+      ctx.fillRect(2, 9, 2.5, 5);
+
+      // Shotgun shell bandolier across chest
+      ctx.fillStyle = "#ef4444";
+      ctx.fillRect(-3, -7, 4, 3);
+      ctx.fillRect(0, -3, 4, 3);
+      ctx.fillRect(3, 1, 4, 3);
+      ctx.fillStyle = "#fbbf24";
+      ctx.fillRect(-4, -7, 1.5, 3);
+      ctx.fillRect(-1, -3, 1.5, 3);
+      ctx.fillRect(2, 1, 1.5, 3);
+
+      // Heavy Blast Helmet with Face Visor & Respirator
+      ctx.fillStyle = "#3f4a36";
+      ctx.beginPath();
+      ctx.arc(1, 0, 8.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Dark Visor
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(3, -4, 4, 8);
+      // Respirator filter
+      ctx.fillStyle = "#64748b";
+      ctx.beginPath();
+      ctx.arc(7, 0, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Armored Arms & SPAS-12 Shotgun
+      ctx.fillStyle = "#293241";
+      ctx.fillRect(-2, 7, 12, 6);
+      ctx.beginPath();
+      ctx.moveTo(-2, -12);
+      ctx.lineTo(16 + recoil, -3);
+      ctx.lineTo(14 + recoil, 2);
+      ctx.lineTo(-4, -7);
+      ctx.closePath();
+      ctx.fill();
+
+      // Heavy Gloves
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(7 + recoil, 5.5, 5, 5);
+      ctx.fillRect(15 + recoil, -3, 5, 5);
+
+      // SPAS-12 Heavy Shotgun
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(2 + recoil, 3, 6, 5); // folding stock
+      ctx.fillRect(7 + recoil, 2, 14, 6.5); // wide receiver
+      ctx.fillStyle = "#f59e0b";
+      ctx.fillRect(9 + recoil, 3.5, 5, 2); // hazard accent
+      ctx.fillStyle = "#475569";
+      ctx.fillRect(15 + recoil, 3, 6, 4.5); // ribbed pump
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(20 + recoil, 3, 9, 3.5); // twin heavy barrels
+
+    } else {
+      // Combat Engineer (Hank 'Spanner') with High-Vis Orange Vest, Wrench & Riot Carbine
+      // Tool backpack on rear
+      ctx.fillStyle = "#451a03";
+      ctx.fillRect(-13, -7, 6, 14);
+
+      // Steel Pipe Wrench strapped across back (Silver jaw head visible!)
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillRect(-15, -12, 7, 5);
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect(-13, -10, 3, 3); // wrench hole
+      ctx.fillStyle = "#94a3b8";
+      ctx.fillRect(-12, -8, 2.5, 12); // wrench handle
+
+      // Shoulder Sentry Camera / Sensor Pod on right shoulder
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(-8, 8, 7, 5);
+      ctx.fillStyle = "#ef4444";
+      ctx.beginPath();
+      ctx.arc(-4, 10.5, 1.5, 0, Math.PI * 2); // sensor lens
+      ctx.fill();
+
+      // High-Visibility Safety Orange Vest
+      ctx.fillStyle = "#ea580c";
+      ctx.beginPath();
+      ctx.roundRect(-8, -11, 16, 22, 4);
+      ctx.fill();
+
+      // Reflective Silver Safety Stripes
+      ctx.fillStyle = "#e2e8f0";
+      ctx.fillRect(-6, -7, 12, 2.5);
+      ctx.fillRect(-6, 3, 12, 2.5);
+
+      // Head with tousled hair & workshop safety goggles
+      ctx.fillStyle = "#5c3a21"; // brown hair
+      ctx.beginPath();
+      ctx.arc(0, 0, 7.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Workshop safety goggles on forehead
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(1, -5, 4, 10);
+      ctx.fillStyle = "#38bdf8";
+      ctx.fillRect(2, -4, 2, 3.5);
+      ctx.fillRect(2, 0.5, 2, 3.5);
+
+      // Tanned Arms with Leather Gloves
+      ctx.fillStyle = "#fed7aa"; // bare arms
+      ctx.fillRect(-2, 6, 11, 5);
+      ctx.beginPath();
+      ctx.moveTo(-2, -9);
+      ctx.lineTo(15 + recoil, -2);
+      ctx.lineTo(13 + recoil, 2);
+      ctx.lineTo(-4, -5);
+      ctx.closePath();
+      ctx.fill();
+
+      // Leather work gloves
+      ctx.fillStyle = "#78350f";
+      ctx.fillRect(7 + recoil, 4.5, 4, 4);
+      ctx.fillRect(14 + recoil, -2, 4, 4);
+
+      // Riot Carbine
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(2 + recoil, 3, 6, 4);
+      ctx.fillRect(8 + recoil, 2, 12, 5);
+      ctx.fillStyle = "#a855f7";
+      ctx.fillRect(11 + recoil, 0, 4, 2); // holographic optic
+      ctx.fillStyle = "#111827";
+      ctx.fillRect(19 + recoil, 3, 7, 3); // barrel
+
+      // Flashlight cone casting forward
+      const grad = ctx.createRadialGradient(24, 3, 4, 180, 3, 80);
       grad.addColorStop(0, "rgba(255, 255, 200, 0.22)");
       grad.addColorStop(1, "rgba(255, 255, 200, 0)");
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.moveTo(24, 2);
-      ctx.arc(24, 2, 160, -0.25, 0.25);
+      ctx.moveTo(24, 3);
+      ctx.arc(24, 3, 160, -0.25, 0.25);
       ctx.closePath();
       ctx.fill();
-    } else {
-      // Commando M4A1 Assault Rifle
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(8 + recoil, 0, 18, 4); // barrel & body
-      ctx.fillStyle = "#334155";
-      ctx.fillRect(6 + recoil, -1, 10, 5); // receiver
-      ctx.fillStyle = "#22c55e";
-      ctx.fillRect(10 + recoil, -3, 6, 2); // tactical optic
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(12 + recoil, 4, 3, 5);  // magazine
     }
 
-    // Tactical Gloved Hands holding the weapon
-    ctx.fillStyle = "#334155";
-    ctx.beginPath();
-    ctx.arc(8 + recoil, -4, 3.5, 0, Math.PI * 2);
-    ctx.arc(14 + recoil, 4, 3.5, 0, Math.PI * 2);
-    ctx.fill();
+    // STEP 3: MUZZLE FLASH ON FIRING
+    if (p.fireCooldown > 0 && p.fireCooldown > cfg.fireRate * 0.52) {
+      let muzzleX = 27;
+      let muzzleY = 3.5;
+      if (p.charClass === "sniper") { muzzleX = 41; muzzleY = 3; }
+      else if (p.charClass === "medic") { muzzleX = 20; muzzleY = -9; }
+      else if (p.charClass === "heavy") { muzzleX = 29; muzzleY = 4.5; }
+      else if (p.charClass === "engineer") { muzzleX = 26; muzzleY = 4; }
 
-    // Muzzle Flash
-    if (p.fireCooldown > 0 && p.fireCooldown > cfg.fireRate * 0.55) {
-      const flashX = 26 + (p.charClass === "sniper" ? 8 : 0);
-      ctx.fillStyle = "#fef08a";
-      ctx.beginPath();
-      ctx.arc(flashX, 2, 6, 0, Math.PI * 2);
-      ctx.fill();
+      // Outer orange star
       ctx.fillStyle = "#f59e0b";
       ctx.beginPath();
-      ctx.arc(flashX + 2, 2, 3, 0, Math.PI * 2);
+      ctx.arc(muzzleX, muzzleY, 7, 0, Math.PI * 2);
       ctx.fill();
-    }
-
-    ctx.restore(); // end aim-rotation
-
-    // 4. THE CHOSEN CHARACTER AVATAR TOKEN
-    const tokenRadius = 20;
-    const charImg = this.characterImages ? this.characterImages[p.charClass] : null;
-    const isImgReady = charImg && charImg.complete && charImg.naturalWidth > 0;
-
-    // Glowing outer aura / tactical ring
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(0, 0, tokenRadius + 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = "#0f172a";
-    ctx.fill();
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = cfg.color;
-    ctx.stroke();
-
-    // Circular portrait clip
-    ctx.beginPath();
-    ctx.arc(0, 0, tokenRadius, 0, Math.PI * 2);
-    ctx.clip();
-
-    if (isImgReady) {
-      // Precise crop focusing directly on face, helmet & character identity
-      let cropSize = charImg.naturalWidth * 0.44;
-      let cropY = charImg.naturalHeight * 0.08;
-      if (p.charClass === "sniper") {
-        cropSize = charImg.naturalWidth * 0.42;
-        cropY = charImg.naturalHeight * 0.12;
-      } else if (p.charClass === "medic") {
-        cropSize = charImg.naturalWidth * 0.40;
-        cropY = charImg.naturalHeight * 0.04;
-      } else if (p.charClass === "heavy") {
-        cropSize = charImg.naturalWidth * 0.44;
-        cropY = charImg.naturalHeight * 0.08;
-      } else if (p.charClass === "engineer") {
-        cropSize = charImg.naturalWidth * 0.42;
-        cropY = charImg.naturalHeight * 0.10;
-      }
-      const cropX = (charImg.naturalWidth - cropSize) / 2;
-
-      ctx.drawImage(
-        charImg,
-        cropX, cropY, cropSize, cropSize,
-        -tokenRadius, -tokenRadius, tokenRadius * 2, tokenRadius * 2
-      );
-    } else {
-      // Detailed fallback top-down soldier body (never a plain green box)
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(-tokenRadius, -tokenRadius, tokenRadius * 2, tokenRadius * 2);
-      ctx.fillStyle = cfg.color;
+      // Inner yellow bright core
+      ctx.fillStyle = "#fef08a";
       ctx.beginPath();
-      ctx.arc(0, 0, tokenRadius - 3, 0, Math.PI * 2);
+      ctx.arc(muzzleX + 1, muzzleY, 3.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(-6, -4, 12, 6);
+
+      // Medic second muzzle flash for akimbo
+      if (p.charClass === "medic") {
+        ctx.fillStyle = "#f59e0b";
+        ctx.beginPath();
+        ctx.arc(muzzleX, 7.5, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fef08a";
+        ctx.beginPath();
+        ctx.arc(muzzleX + 1, 7.5, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
-    // Subtle glass lens reflection
-    const grad = ctx.createLinearGradient(-tokenRadius, -tokenRadius, tokenRadius, tokenRadius);
-    grad.addColorStop(0, "rgba(255, 255, 255, 0.28)");
-    grad.addColorStop(0.4, "rgba(255, 255, 255, 0.05)");
-    grad.addColorStop(1, "rgba(0, 0, 0, 0.2)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(-tokenRadius, -tokenRadius, tokenRadius * 2, tokenRadius * 2);
+    ctx.restore(); // end person rotation
 
-    ctx.restore(); // end token clip
-
-    // 5. Directional Aim Arrowhead on Token Rim
-    ctx.save();
-    ctx.rotate(p.angle);
-    ctx.fillStyle = cfg.color;
-    ctx.beginPath();
-    ctx.moveTo(tokenRadius + 5, 0);
-    ctx.lineTo(tokenRadius, -4);
-    ctx.lineTo(tokenRadius + 2, 0);
-    ctx.lineTo(tokenRadius, 4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-
-    // 6. Class Badge Icon (Bottom-Right of Token)
-    let classIcon = "⭐";
-    if (p.charClass === "sniper") classIcon = "🎯";
-    else if (p.charClass === "medic") classIcon = "✚";
-    else if (p.charClass === "heavy") classIcon = "💥";
-    else if (p.charClass === "engineer") classIcon = "⚙️";
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(15, 15, 7.5, 0, Math.PI * 2);
-    ctx.fillStyle = "#0f172a";
-    ctx.fill();
-    ctx.strokeStyle = cfg.color;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.font = "bold 9px system-ui";
-    ctx.fillStyle = cfg.color;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(classIcon, 15, 15);
-    ctx.restore();
-
-    // 7. Reloading Spinner Overlay
+    // STEP 4: FLOATING HUD ABOVE SURVIVOR (Health bar, Class Icon, Name Tag)
+    // Reloading indicator
     if (p.isReloading) {
       const cfgReload = cfg.reloadTime || 1.5;
       const progress = 1 - (p.reloadTimer / cfgReload);
@@ -1550,23 +1794,23 @@ export class PixelGameEngine {
       ctx.strokeStyle = "#f59e0b";
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(0, 0, tokenRadius + 6, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+      ctx.arc(0, -6, 22, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
       ctx.stroke();
 
       ctx.fillStyle = "#fbbf24";
       ctx.font = "bold 9px monospace";
       ctx.textAlign = "center";
-      ctx.fillText("RELOAD", 0, -34);
+      ctx.fillText("RELOAD", 0, -32);
       ctx.restore();
     }
 
-    // 8. Health Bar (Non-rotated)
+    // Health Bar
     const barW = 34;
     const barH = 4;
-    const barY = -28;
+    const barY = -30;
     ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
     ctx.fillRect(-barW / 2 - 1, barY - 1, barW + 2, barH + 2);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
     ctx.lineWidth = 1;
     ctx.strokeRect(-barW / 2 - 1, barY - 1, barW + 2, barH + 2);
 
@@ -1574,8 +1818,15 @@ export class PixelGameEngine {
     ctx.fillStyle = ratio > 0.5 ? "#22c55e" : ratio > 0.25 ? "#f59e0b" : "#ef4444";
     ctx.fillRect(-barW / 2, barY, barW * ratio, barH);
 
-    // 9. Nickname & Character Title Tag
-    const displayName = isLocal ? `${cfg.name} (You)` : (p.name || cfg.name);
+    // Class icon badge
+    let classIcon = "⭐";
+    if (p.charClass === "sniper") classIcon = "🎯";
+    else if (p.charClass === "medic") classIcon = "✚";
+    else if (p.charClass === "heavy") classIcon = "💥";
+    else if (p.charClass === "engineer") classIcon = "⚙️";
+
+    // Name Tag
+    const displayName = isLocal ? `${classIcon} ${cfg.name} (You)` : `${classIcon} ${p.name || cfg.name}`;
     ctx.font = "bold 10px system-ui";
     ctx.fillStyle = "#ffffff";
     ctx.textAlign = "center";
