@@ -3,9 +3,6 @@
 // ============================================================================
 
 export const CONFIG = {
-  DEFAULT_PASSWORD: "dakustowerGame69",
-  PASSWORD_LENGTH: 16,
-
   // Big Map World Dimensions (in pixels)
   WORLD: {
     WIDTH: 2048,

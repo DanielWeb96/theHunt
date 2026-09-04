@@ -11,46 +11,14 @@
 <body>
 
   <!-- ======================================================================
-       1. SECURITY LOCK SCREEN (ACCESS GATE)
+       LOBBY & MATCHMAKING SCREEN (DIRECT HOST / JOIN)
        ====================================================================== -->
-  <div id="lock-screen" class="overlay-screen">
-    <div class="modal-box">
-      <div class="modal-icon">☣️</div>
-      <h1 class="modal-title">Dead Zone: Urban Outpost</h1>
-      <p class="modal-subtitle">Pixel Art Co-op Zombie Defense. Enter the security clearance key.</p>
-
-      <div class="input-wrapper">
-        <input 
-          type="password" 
-          id="password-input" 
-          class="styled-input" 
-          placeholder="Enter access password"
-          maxlength="32"
-          autocomplete="off"
-          spellcheck="false"
-        >
-        <span id="letter-counter" class="letter-counter">0 / 16</span>
-      </div>
-
-      <div class="form-hint">
-        <strong>Default Password:</strong> <code>dakustowerGame69</code><br>
-        <small>(Configured in <code>js/config.js</code>)</small>
-      </div>
-
-      <button id="unlock-btn" class="btn-primary" disabled>Unlock Terminal</button>
-      <div id="lock-error" class="error-message"></div>
-    </div>
-  </div>
-
-  <!-- ======================================================================
-       2. CHARACTER SELECT & LOBBY SCREEN
-       ====================================================================== -->
-  <div id="lobby-screen" class="overlay-screen hidden">
+  <div id="lobby-screen" class="overlay-screen">
     <div class="modal-box lobby-wide">
       <div class="modal-header-row">
         <div>
-          <h2 class="modal-title">Select Your Survivor</h2>
-          <p class="modal-subtitle">Choose your operative before dropping into the urban dead zone.</p>
+          <h2 class="modal-title">☣️ Dead Zone: Urban Outpost</h2>
+          <p class="modal-subtitle">16-bit Co-op Zombie Defense. Pick your survivor and host or join a match.</p>
         </div>
         <div class="player-name-box">
           <input 

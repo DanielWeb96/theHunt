@@ -8,12 +8,6 @@ import { NetworkManager } from "./network.js";
 import { PixelGameEngine } from "./pixelGame.js";
 
 // DOM Elements
-const lockScreen = document.getElementById("lock-screen");
-const passwordInput = document.getElementById("password-input");
-const letterCounter = document.getElementById("letter-counter");
-const unlockBtn = document.getElementById("unlock-btn");
-const lockError = document.getElementById("lock-error");
-
 const lobbyScreen = document.getElementById("lobby-screen");
 const playerNameInput = document.getElementById("player-name-input");
 const charCards = document.querySelectorAll(".char-card");
@@ -66,55 +60,13 @@ const network = new NetworkManager();
 const engine = new PixelGameEngine(canvas, network);
 
 // ----------------------------------------------------------------------------
-// 1. LOCK SCREEN (ACCESS GATE)
+// URL ROOM INVITE PRE-FILL
 // ----------------------------------------------------------------------------
-function checkPasswordInput() {
-  const val = passwordInput.value.trim();
-  const len = val.length;
-  letterCounter.textContent = `${len} / ${CONFIG.PASSWORD_LENGTH}`;
-
-  if (len === CONFIG.PASSWORD_LENGTH) {
-    letterCounter.className = "letter-counter valid";
-    unlockBtn.disabled = false;
-  } else {
-    letterCounter.className = "letter-counter invalid";
-    unlockBtn.disabled = true;
-  }
+const params = new URLSearchParams(window.location.search);
+const roomParam = params.get("room");
+if (roomParam && joinRoomInput) {
+  joinRoomInput.value = roomParam.toUpperCase();
 }
-
-passwordInput.addEventListener("input", checkPasswordInput);
-passwordInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !unlockBtn.disabled) {
-    unlockBtn.click();
-  }
-});
-
-unlockBtn.addEventListener("click", () => {
-  sound.init();
-  const entered = passwordInput.value.trim();
-
-  if (entered.length !== CONFIG.PASSWORD_LENGTH) {
-    lockError.textContent = `Password must be ${CONFIG.PASSWORD_LENGTH} characters.`;
-    return;
-  }
-
-  if (entered.toLowerCase() !== CONFIG.DEFAULT_PASSWORD.toLowerCase()) {
-    lockError.textContent = "Incorrect clearance key. Try again.";
-    return;
-  }
-
-  // Success
-  lockError.textContent = "";
-  lockScreen.classList.add("hidden");
-  lobbyScreen.classList.remove("hidden");
-
-  // Check URL room invite
-  const params = new URLSearchParams(window.location.search);
-  const roomParam = params.get("room");
-  if (roomParam) {
-    joinRoomInput.value = roomParam.toUpperCase();
-  }
-});
 
 // ----------------------------------------------------------------------------
 // 2. CHARACTER SELECTION & LOBBY
