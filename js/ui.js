@@ -55,9 +55,10 @@ const restartGameBtn = document.getElementById("restart-game-btn");
 
 let selectedClass = "commando";
 
-// Instantiate systems
 const network = new NetworkManager();
 const engine = new PixelGameEngine(canvas, network);
+window.engine = engine;
+window.network = network;
 
 // ----------------------------------------------------------------------------
 // URL ROOM INVITE PRE-FILL

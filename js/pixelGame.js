@@ -41,8 +41,9 @@ export class PixelGameEngine {
       this.mapLoaded = true;
     }
 
-    // Houses & Urban Building Hitboxes
-    this.houses = CONFIG.HOUSES || [];
+    // Urban Map Hitboxes (Buildings, Fortification Bunker, Sandbags, Vehicles)
+    this.hitboxes = CONFIG.HITBOXES || CONFIG.HOUSES || [];
+    this.houses = this.hitboxes; // Backwards compatibility alias
     this.showHitboxes = false; // Toggle with 'H' for visual hitbox inspect
 
     // Local player state
@@ -160,54 +161,120 @@ export class PixelGameEngine {
     this.myPlayer.maxAmmo = cfg.magSize;
     this.myPlayer.x = this.worldWidth / 2 + (Math.random() - 0.5) * 80;
     this.myPlayer.y = this.worldHeight / 2 + (Math.random() - 0.5) * 80;
-    this.resolveHouseCollisions(this.myPlayer, 16);
+    this.resolveCollisions(this.myPlayer, 16);
   }
 
   // --------------------------------------------------------------------------
-  // HOUSE HITBOX COLLISION SYSTEM
+  // ADVANCED HITBOX COLLISION & RAYCAST SYSTEM
   // --------------------------------------------------------------------------
-  checkHouseCollision(x, y, radius = 14) {
-    for (const b of this.houses) {
+  checkHitboxCollision(x, y, radius = 14) {
+    for (const b of this.hitboxes) {
       const closestX = Math.max(b.x, Math.min(x, b.x + b.w));
       const closestY = Math.max(b.y, Math.min(y, b.y + b.h));
       const dx = x - closestX;
       const dy = y - closestY;
       if (dx * dx + dy * dy < radius * radius) {
-        return true;
+        return b;
       }
     }
-    return false;
+    return null;
+  }
+
+  checkHouseCollision(x, y, radius = 14) {
+    return this.checkHitboxCollision(x, y, radius) !== null;
+  }
+
+  resolveCollisions(entity, radius = 14, iterations = 3) {
+    for (let iter = 0; iter < iterations; iter++) {
+      let resolvedAny = false;
+
+      for (const b of this.hitboxes) {
+        const closestX = Math.max(b.x, Math.min(entity.x, b.x + b.w));
+        const closestY = Math.max(b.y, Math.min(entity.y, b.y + b.h));
+        const dx = entity.x - closestX;
+        const dy = entity.y - closestY;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq < radius * radius) {
+          resolvedAny = true;
+          const dist = Math.sqrt(distSq);
+          if (dist > 0.001) {
+            const overlap = radius - dist;
+            entity.x += (dx / dist) * overlap;
+            entity.y += (dy / dist) * overlap;
+          } else {
+            // Center is deeply inside hitbox: eject to closest exterior face
+            const distLeft = entity.x - b.x;
+            const distRight = (b.x + b.w) - entity.x;
+            const distTop = entity.y - b.y;
+            const distBottom = (b.y + b.h) - entity.y;
+            const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+
+            if (minDist === distLeft) entity.x = b.x - radius;
+            else if (minDist === distRight) entity.x = b.x + b.w + radius;
+            else if (minDist === distTop) entity.y = b.y - radius;
+            else entity.y = b.y + b.h + radius;
+          }
+        }
+      }
+
+      if (!resolvedAny) break;
+    }
   }
 
   resolveHouseCollisions(entity, radius = 14) {
-    for (const b of this.houses) {
-      const closestX = Math.max(b.x, Math.min(entity.x, b.x + b.w));
-      const closestY = Math.max(b.y, Math.min(entity.y, b.y + b.h));
-      const dx = entity.x - closestX;
-      const dy = entity.y - closestY;
-      const distSq = dx * dx + dy * dy;
+    this.resolveCollisions(entity, radius, 3);
+  }
 
-      if (distSq < radius * radius) {
-        const dist = Math.sqrt(distSq);
-        if (dist > 0.001) {
-          const overlap = radius - dist;
-          entity.x += (dx / dist) * overlap;
-          entity.y += (dy / dist) * overlap;
-        } else {
-          // Entity center is inside the house box: push to nearest exterior edge
-          const distLeft = entity.x - b.x;
-          const distRight = (b.x + b.w) - entity.x;
-          const distTop = entity.y - b.y;
-          const distBottom = (b.y + b.h) - entity.y;
-          const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+  // Continuous Raycast / Segment-AABB Intersection (Fast Liang-Barsky / Slab algorithm)
+  // Ensures fast-moving bullets never tunnel through obstacles
+  checkRayHitboxCollision(x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    let closestT = 1.0;
+    let hitResult = null;
 
-          if (minDist === distLeft) entity.x = b.x - radius;
-          else if (minDist === distRight) entity.x = b.x + b.w + radius;
-          else if (minDist === distTop) entity.y = b.y - radius;
-          else entity.y = b.y + b.h + radius;
-        }
+    for (const b of this.hitboxes) {
+      let tMin = 0.0;
+      let tMax = closestT;
+
+      // X-slab
+      if (Math.abs(dx) < 1e-7) {
+        if (x1 < b.x || x1 > b.x + b.w) continue;
+      } else {
+        let t1 = (b.x - x1) / dx;
+        let t2 = (b.x + b.w - x1) / dx;
+        if (t1 > t2) { const tmp = t1; t1 = t2; t2 = tmp; }
+        tMin = Math.max(tMin, t1);
+        tMax = Math.min(tMax, t2);
+        if (tMin > tMax) continue;
+      }
+
+      // Y-slab
+      if (Math.abs(dy) < 1e-7) {
+        if (y1 < b.y || y1 > b.y + b.h) continue;
+      } else {
+        let t1 = (b.y - y1) / dy;
+        let t2 = (b.y + b.h - y1) / dy;
+        if (t1 > t2) { const tmp = t1; t1 = t2; t2 = tmp; }
+        tMin = Math.max(tMin, t1);
+        tMax = Math.min(tMax, t2);
+        if (tMin > tMax) continue;
+      }
+
+      if (tMin >= 0 && tMin < closestT) {
+        closestT = tMin;
+        hitResult = {
+          hit: true,
+          t: tMin,
+          x: x1 + dx * tMin,
+          y: y1 + dy * tMin,
+          hitbox: b
+        };
       }
     }
+
+    return hitResult;
   }
 
   spawnWallHitParticles(x, y) {
@@ -309,18 +376,18 @@ export class PixelGameEngine {
     const moveSpeed = cfg.speed * 60; // pixels per second
     const pRadius = 14;
 
-    // Move X axis (with smooth house wall sliding)
+    // Move X axis (with smooth hitbox sliding)
     if (mx !== 0) {
       p.x += mx * moveSpeed * dt;
       p.x = Math.max(pRadius, Math.min(this.worldWidth - pRadius, p.x));
-      this.resolveHouseCollisions(p, pRadius);
+      this.resolveCollisions(p, pRadius);
     }
 
-    // Move Y axis (with smooth house wall sliding)
+    // Move Y axis (with smooth hitbox sliding)
     if (my !== 0) {
       p.y += my * moveSpeed * dt;
       p.y = Math.max(pRadius, Math.min(this.worldHeight - pRadius, p.y));
-      this.resolveHouseCollisions(p, pRadius);
+      this.resolveCollisions(p, pRadius);
     }
 
     // Aim angle towards mouse cursor
@@ -505,12 +572,24 @@ export class PixelGameEngine {
   updateBullets(dt) {
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i];
+      const prevX = b.x;
+      const prevY = b.y;
       b.x += b.vx * dt;
       b.y += b.vy * dt;
       b.life -= dt;
 
-      // Check collision with solid house walls
-      if (this.checkHouseCollision(b.x, b.y, 5)) {
+      // Continuous raycast collision check against all solid hitboxes
+      const rayHit = this.checkRayHitboxCollision(prevX, prevY, b.x, b.y);
+      if (rayHit) {
+        this.spawnWallHitParticles(rayHit.x, rayHit.y);
+        sound.bulletWallHit();
+        b.life = 0;
+        this.bullets.splice(i, 1);
+        continue;
+      }
+
+      // Point-circle safeguard
+      if (this.checkHitboxCollision(b.x, b.y, 4)) {
         this.spawnWallHitParticles(b.x, b.y);
         sound.bulletWallHit();
         b.life = 0;
@@ -712,7 +791,7 @@ export class PixelGameEngine {
       animTime: Math.random() * 10
     };
 
-    this.resolveHouseCollisions(zombie, zombie.radius);
+    this.resolveCollisions(zombie, zombie.radius);
     this.zombies.push(zombie);
     sound.zombieGroan();
   }
@@ -741,15 +820,46 @@ export class PixelGameEngine {
         const vx = Math.cos(z.angle) * z.speed;
         const vy = Math.sin(z.angle) * z.speed;
 
-        // Move X with house collision (smooth wall-sliding around building corners)
+        const startX = z.x;
+        const startY = z.y;
+
+        // Move X with hitbox collision (smooth wall-sliding around building corners)
         z.x += vx * dt;
         z.x = Math.max(z.radius, Math.min(this.worldWidth - z.radius, z.x));
-        this.resolveHouseCollisions(z, z.radius);
+        this.resolveCollisions(z, z.radius);
 
-        // Move Y with house collision
+        // Move Y with hitbox collision (smooth wall-sliding around building corners)
         z.y += vy * dt;
         z.y = Math.max(z.radius, Math.min(this.worldHeight - z.radius, z.y));
-        this.resolveHouseCollisions(z, z.radius);
+        this.resolveCollisions(z, z.radius);
+
+        // Corner slip assist: if movement was heavily blocked by obstacle, glide along perpendicular tangent
+        const movedDist = Math.hypot(z.x - startX, z.y - startY);
+        const expectedDist = z.speed * dt;
+        if (movedDist < expectedDist * 0.4 && expectedDist > 0.001) {
+          const perpAngle = z.angle + Math.PI / 2;
+          const slipX = Math.cos(perpAngle) * z.speed * dt * 0.65;
+          const slipY = Math.sin(perpAngle) * z.speed * dt * 0.65;
+          z.x += slipX;
+          z.y += slipY;
+          this.resolveCollisions(z, z.radius);
+        }
+
+        // Soft zombie-zombie flocking separation so hordes flow around obstacles
+        const checkWindow = Math.min(this.zombies.length, i + 6);
+        for (let j = Math.max(0, i - 6); j < checkWindow; j++) {
+          if (i === j) continue;
+          const other = this.zombies[j];
+          const cdx = z.x - other.x;
+          const cdy = z.y - other.y;
+          const cdist = Math.hypot(cdx, cdy);
+          const minSep = z.radius + other.radius;
+          if (cdist > 0 && cdist < minSep) {
+            const push = (minSep - cdist) * 0.12;
+            z.x += (cdx / cdist) * push;
+            z.y += (cdy / cdist) * push;
+          }
+        }
 
         // Attack player on contact
         if (minDist < z.radius + 14) {
@@ -1020,19 +1130,62 @@ export class PixelGameEngine {
     ctx.lineWidth = 4;
     ctx.strokeRect(0, 0, this.worldWidth, this.worldHeight);
 
-    // Debug: Draw House Hitbox Outlines (Toggle with H)
+    // Debug: Draw Hitbox Outlines & Tactical Information (Toggle with H)
     if (this.showHitboxes) {
       ctx.save();
-      ctx.strokeStyle = "#f43f5e";
-      ctx.lineWidth = 3;
-      ctx.fillStyle = "rgba(244, 63, 94, 0.22)";
       ctx.font = "bold 13px monospace";
-      for (const h of this.houses) {
+      for (const h of this.hitboxes) {
+        let strokeCol = "#f43f5e";
+        let fillCol = "rgba(244, 63, 94, 0.22)";
+        let icon = "🏠";
+        if (h.type === "fortification") {
+          strokeCol = "#84cc16";
+          fillCol = "rgba(132, 204, 22, 0.25)";
+          icon = "🛡️";
+        } else if (h.type === "cover") {
+          strokeCol = "#eab308";
+          fillCol = "rgba(234, 179, 8, 0.25)";
+          icon = "🧱";
+        } else if (h.type === "vehicle") {
+          strokeCol = "#38bdf8";
+          fillCol = "rgba(56, 189, 248, 0.25)";
+          icon = "🚗";
+        }
+
+        ctx.fillStyle = fillCol;
         ctx.fillRect(h.x, h.y, h.w, h.h);
+        ctx.strokeStyle = strokeCol;
+        ctx.lineWidth = 2.5;
         ctx.strokeRect(h.x, h.y, h.w, h.h);
+
+        // Corner bracket accents
+        const bLen = Math.min(22, h.w / 4, h.h / 4);
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        // Top-left
+        ctx.moveTo(h.x, h.y + bLen); ctx.lineTo(h.x, h.y); ctx.lineTo(h.x + bLen, h.y);
+        // Top-right
+        ctx.moveTo(h.x + h.w - bLen, h.y); ctx.lineTo(h.x + h.w, h.y); ctx.lineTo(h.x + h.w, h.y + bLen);
+        // Bottom-left
+        ctx.moveTo(h.x, h.y + h.h - bLen); ctx.lineTo(h.x, h.y + h.h); ctx.lineTo(h.x + bLen, h.y + h.h);
+        // Bottom-right
+        ctx.moveTo(h.x + h.w - bLen, h.y + h.h); ctx.lineTo(h.x + h.w, h.y + h.h); ctx.lineTo(h.x + h.w, h.y + h.h - bLen);
+        ctx.stroke();
+
+        // Header pill badge
+        const badgeText = `${icon} ${h.name} [${Math.round(h.w)}×${Math.round(h.h)}]`;
+        const textWidth = ctx.measureText(badgeText).width;
+        const textX = Math.max(10, Math.min(h.x + 12, this.worldWidth - textWidth - 20));
+        const textY = Math.max(24, Math.min(h.y + 24, this.worldHeight - 12));
+
+        ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+        ctx.fillRect(textX - 6, textY - 14, textWidth + 12, 20);
+        ctx.strokeStyle = strokeCol;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(textX - 6, textY - 14, textWidth + 12, 20);
+
         ctx.fillStyle = "#ffffff";
-        ctx.fillText(`🏠 ${h.name} [HITBOX]`, h.x + 20, h.y + 36);
-        ctx.fillStyle = "rgba(244, 63, 94, 0.22)";
+        ctx.fillText(badgeText, textX, textY);
       }
       ctx.restore();
     }
@@ -1246,11 +1399,22 @@ export class PixelGameEngine {
     const midY = this.worldHeight / 2;
     const roadW = 280;
 
-    // Building blocks in 4 quadrants (matching exact house hitboxes)
-    ctx.fillStyle = "#14171f";
-    ctx.strokeStyle = "#334155";
-    ctx.lineWidth = 2;
-    for (const h of this.houses) {
+    // Hitbox structures (Buildings, Outpost Bunker, Sandbags, Vehicles)
+    for (const h of this.hitboxes) {
+      if (h.type === "fortification") {
+        ctx.fillStyle = "#365314";
+        ctx.strokeStyle = "#84cc16";
+      } else if (h.type === "cover") {
+        ctx.fillStyle = "#713f12";
+        ctx.strokeStyle = "#eab308";
+      } else if (h.type === "vehicle") {
+        ctx.fillStyle = h.id === "car_red" ? "#7f1d1d" : "#0c4a6e";
+        ctx.strokeStyle = h.id === "car_red" ? "#ef4444" : "#38bdf8";
+      } else {
+        ctx.fillStyle = "#14171f";
+        ctx.strokeStyle = "#334155";
+      }
+      ctx.lineWidth = 2;
       ctx.fillRect(h.x, h.y, h.w, h.h);
       ctx.strokeRect(h.x, h.y, h.w, h.h);
     }
@@ -1298,10 +1462,13 @@ export class PixelGameEngine {
 
     const scale = miniSize / this.worldWidth;
 
-    // Draw building footprints on minimap
-    ctx.fillStyle = "rgba(30, 41, 59, 0.75)";
-    for (const h of this.houses) {
-      ctx.fillRect(miniX + h.x * scale, miniY + h.y * scale, h.w * scale, h.h * scale);
+    // Draw building & tactical obstacle footprints on minimap
+    for (const h of this.hitboxes) {
+      if (h.type === "fortification") ctx.fillStyle = "rgba(132, 204, 22, 0.85)";
+      else if (h.type === "cover") ctx.fillStyle = "rgba(234, 179, 8, 0.85)";
+      else if (h.type === "vehicle") ctx.fillStyle = "rgba(56, 189, 248, 0.85)";
+      else ctx.fillStyle = "rgba(51, 65, 85, 0.85)";
+      ctx.fillRect(miniX + h.x * scale, miniY + h.y * scale, Math.max(1.5, h.w * scale), Math.max(1.5, h.h * scale));
     }
 
     const isMapReady = this.mapLoaded || (this.mapImage.complete && this.mapImage.naturalWidth > 0);

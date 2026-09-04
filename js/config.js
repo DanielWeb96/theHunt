@@ -11,40 +11,93 @@ export const CONFIG = {
   },
 
   // --------------------------------------------------------------------------
-  // HOUSES & URBAN BUILDING HITBOXES (Solid walls for players, zombies, bullets)
+  // IMPROVED URBAN MAP HITBOXES (Buildings, Outpost Bunker, Sandbags, Vehicles)
   // --------------------------------------------------------------------------
-  HOUSES: [
+  HITBOXES: [
+    // 1. Four Major Urban Building Blocks
     {
       id: "house_northwest",
-      name: "Hardware Store & Northwest Block",
+      name: "Hardware Store Block",
+      type: "building",
       x: 0,
       y: 0,
-      w: 750,
-      h: 730
+      w: 770,
+      h: 720,
+      color: "#f43f5e"
     },
     {
       id: "house_northeast",
-      name: "Deli & Northeast Block",
-      x: 1290,
+      name: "Deli & Commercial Block",
+      type: "building",
+      x: 1272,
       y: 0,
-      w: 758,
-      h: 730
+      w: 776,
+      h: 720,
+      color: "#f43f5e"
     },
     {
       id: "house_southwest",
-      name: "Tenement & Southwest Block",
+      name: "Tenement & Ruined Block",
+      type: "building",
       x: 0,
       y: 1300,
-      w: 750,
-      h: 748
+      w: 770,
+      h: 748,
+      color: "#f43f5e"
     },
     {
       id: "house_southeast",
-      name: "Warehouse & Southeast Block",
-      x: 1290,
+      name: "Industrial & Brownstone Block",
+      type: "building",
+      x: 1272,
       y: 1300,
-      w: 758,
-      h: 748
+      w: 776,
+      h: 748,
+      color: "#f43f5e"
+    },
+
+    // 2. Military Outpost Fortifications & Cover
+    {
+      id: "bunker_outpost",
+      name: "Outpost Bunker",
+      type: "fortification",
+      x: 1380,
+      y: 772,
+      w: 248,
+      h: 232,
+      color: "#84cc16"
+    },
+    {
+      id: "sandbags_bunker",
+      name: "Sandbag Barricade",
+      type: "cover",
+      x: 1350,
+      y: 990,
+      w: 280,
+      h: 90,
+      color: "#eab308"
+    },
+
+    // 3. Abandoned Vehicles on West Road
+    {
+      id: "car_red",
+      name: "Wrecked Red Sedan",
+      type: "vehicle",
+      x: 44,
+      y: 740,
+      w: 348,
+      h: 168,
+      color: "#ef4444"
+    },
+    {
+      id: "car_blue",
+      name: "Wrecked Blue Sedan",
+      type: "vehicle",
+      x: 156,
+      y: 1056,
+      w: 348,
+      h: 136,
+      color: "#38bdf8"
     }
   ],
 
@@ -205,3 +258,6 @@ export const CONFIG = {
     }
   }
 };
+
+// Backwards compatibility alias
+CONFIG.HOUSES = CONFIG.HITBOXES;
