@@ -155,109 +155,93 @@
   </div>
 
   <!-- ======================================================================
-       3. ACTIVE PIXEL ART GAMEPLAY SCREEN
+       3. ACTIVE FULLSCREEN PIXEL ART GAMEPLAY SCREEN
        ====================================================================== -->
-  <div id="game-container" class="hidden">
-    <!-- Top HUD Bar -->
-    <header class="top-bar">
-      <div class="stat-group">
-        <!-- Player HP -->
-        <div class="stat-badge lives" title="Your Health">
-          <span class="icon">❤️</span>
-          <span><strong id="stat-hp">120</strong> HP</span>
-        </div>
-        <!-- Ammo -->
-        <div class="stat-badge ammo" title="Ammunition">
-          <span class="icon">🎯</span>
-          <span><strong id="stat-ammo">30</strong> / <span id="stat-max-ammo">30</span></span>
-        </div>
-        <!-- Wave / Night -->
-        <div class="stat-badge wave" title="Current Wave">
-          <span class="icon">🌙</span>
-          <span>Night <strong id="stat-wave">1</strong></span>
-        </div>
-        <!-- Zombies Remaining -->
-        <div class="stat-badge enemies" title="Active Zombies">
-          <span class="icon">🧟</span>
-          <span><strong id="stat-enemies">0</strong> Undead</span>
-        </div>
-        <!-- Score -->
-        <div class="stat-badge score" title="Team Score">
-          <span class="icon">⭐</span>
-          <span><strong id="stat-score">0</strong> pts</span>
+  <div id="game-container" class="fullscreen-game hidden">
+    <!-- Fullscreen Canvas -->
+    <canvas id="game-canvas"></canvas>
+    
+    <!-- Top-Left Operative Status HUD -->
+    <div class="hud-floating hud-top-left">
+      <div class="hud-profile-row">
+        <img id="hud-char-img" src="assets/char_commando.jpg" alt="Active Survivor" class="hud-avatar">
+        <div class="hud-profile-info">
+          <div class="hud-name-row">
+            <span id="hud-char-name">Viper</span>
+            <span id="hud-char-title" class="hud-role-pill">Assault</span>
+          </div>
+          <!-- Health Bar -->
+          <div class="hud-hp-container">
+            <div class="hud-hp-track">
+              <div id="hud-hp-fill" class="hud-hp-fill" style="width: 100%;"></div>
+            </div>
+            <span class="hud-hp-text"><strong id="stat-hp">120</strong> HP</span>
+          </div>
+          <!-- Ammo & Weapon -->
+          <div class="hud-ammo-row">
+            <span class="hud-weapon-label" id="hud-weapon-name">M4A1 Rifle</span>
+            <span class="hud-ammo-badge"><span id="stat-ammo">30</span> / <span id="stat-max-ammo">30</span></span>
+          </div>
         </div>
       </div>
 
-      <div class="session-info">
+      <!-- Class Special Ability Button -->
+      <button id="ability-btn" class="btn-ability">
+        ⚡ Special Ability [Space / Right-Click]
+      </button>
+    </div>
+
+    <!-- Top-Center Wave & Objectives HUD -->
+    <div class="hud-floating hud-top-center">
+      <div class="hud-wave-box">
+        <div class="hud-wave-title">
+          <span>🌙 Night <strong id="stat-wave">1</strong></span>
+          <span class="hud-divider">|</span>
+          <span class="hud-enemy-count">🧟 <strong id="stat-enemies">0</strong> Undead</span>
+        </div>
+        <button id="start-wave-btn" class="btn-wave-compact">🚀 Trigger Night 1</button>
+      </div>
+      <div id="canvas-banner" class="canvas-banner">Night Incoming!</div>
+    </div>
+
+    <!-- Top-Right Session, Score & Fullscreen HUD -->
+    <div class="hud-floating hud-top-right">
+      <div class="hud-session-box">
+        <div class="hud-score-row">
+          <span>⭐ <strong id="stat-score">0</strong> pts</span>
+          <button id="fullscreen-btn" class="btn-icon" title="Toggle Fullscreen">⛶</button>
+        </div>
         <div id="room-info" class="room-badge hidden">
           <span>Room: <strong id="display-room-code">----</strong></span>
-          <button id="copy-room-btn" class="copy-btn" title="Copy join link">Copy Link</button>
+          <button id="copy-room-btn" class="copy-btn" title="Copy join link">Copy</button>
         </div>
         <div id="player-chips" class="player-chips"></div>
       </div>
-    </header>
+    </div>
 
-    <!-- Main Game Area -->
-    <main class="game-layout">
-      <!-- 960 x 600 Pixel Canvas with Viewport Camera -->
-      <div class="canvas-wrapper">
-        <canvas id="game-canvas" width="960" height="600"></canvas>
-        <div id="canvas-banner" class="canvas-banner">Night Incoming!</div>
-      </div>
-
-      <!-- Right Control & Ability Panel -->
-      <aside class="control-panel">
-        <!-- Selected Character Profile -->
-        <section class="panel-card character-card-panel">
-          <div class="char-hud-header">
-            <img id="hud-char-img" src="assets/char_commando.jpg" alt="Active Survivor" class="hud-avatar">
-            <div>
-              <h4 id="hud-char-name">Viper</h4>
-              <span id="hud-char-title" class="hud-subtitle">Assault Commando</span>
-            </div>
-          </div>
-          <div class="hud-weapon-desc">
-            <div id="hud-weapon-name" style="font-weight: 700; color: #fff;">M4A1 Assault Rifle</div>
-            <div id="hud-ability-name" style="font-size: 12px; color: var(--accent-cyan); margin-top: 4px;">Special: Frag Grenade</div>
-          </div>
-          <button id="ability-btn" class="btn-ability">
-            ⚡ Special Ability [Space / Right-Click]
-          </button>
-        </section>
-
-        <!-- Wave Defense Actions -->
-        <section class="panel-card">
-          <div class="panel-header">
-            <span>Wave Defense</span>
-          </div>
-          <button id="start-wave-btn" class="btn-wave">🚀 Trigger Night 1</button>
-          <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); cursor: pointer; margin-top: 8px;">
-            <input type="checkbox" id="auto-wave-toggle"> Auto-trigger next nights
-          </label>
-        </section>
-
-        <!-- Radio Comms Chat -->
-        <section class="panel-card chat-container">
-          <div class="panel-header">
-            <span>Radio Comms</span>
-            <span style="font-size: 11px; color: var(--accent-emerald);">● Online</span>
-          </div>
-          <div id="chat-messages" class="chat-messages">
-            <div class="chat-msg system">Hold the urban crossroads! Watch each other's back.</div>
-          </div>
-          <form id="chat-form" class="chat-input-row">
-            <input type="text" id="chat-input" class="chat-input" placeholder="Team comms..." maxlength="80" autocomplete="off">
-            <button type="submit" class="btn-send">Send</button>
-          </form>
-        </section>
-
-        <!-- Keybindings Guide -->
-        <div class="key-guide">
-          <code>[W,A,S,D]</code> Move &nbsp;|&nbsp; <code>[Left Click]</code> Shoot<br>
-          <code>[R]</code> Reload &nbsp;|&nbsp; <code>[Space/Right Click]</code> Ability
+    <!-- Bottom-Left Radio Comms Chatbox -->
+    <div class="hud-floating hud-bottom-left">
+      <div class="chat-panel-compact">
+        <div class="chat-compact-header">
+          <span>📻 Radio Comms</span>
+          <span style="font-size: 10px; color: var(--accent-emerald);">● Online</span>
         </div>
-      </aside>
-    </main>
+        <div id="chat-messages" class="chat-messages">
+          <div class="chat-msg system">Hold the urban crossroads! Watch each other's back.</div>
+        </div>
+        <form id="chat-form" class="chat-input-row">
+          <input type="text" id="chat-input" class="chat-input" placeholder="Radio message..." maxlength="80" autocomplete="off">
+          <button type="submit" class="btn-send">Send</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Bottom-Center Controls Guide -->
+    <div class="hud-floating hud-bottom-center">
+      <div class="hud-guide-pill">
+        <code>[WASD]</code> Move &nbsp;•&nbsp; <code>[Left Click]</code> Shoot &nbsp;•&nbsp; <code>[R]</code> Reload &nbsp;•&nbsp; <code>[Space/Right Click]</code> Ability
+      </div>
+    </div>
   </div>
 
   <!-- Game Over Modal -->

@@ -35,6 +35,8 @@ const roomInfo = document.getElementById("room-info");
 const displayRoomCode = document.getElementById("display-room-code");
 const copyRoomBtn = document.getElementById("copy-room-btn");
 const playerChips = document.getElementById("player-chips");
+const fullscreenBtn = document.getElementById("fullscreen-btn");
+const hudHpFill = document.getElementById("hud-hp-fill");
 
 // Active Character HUD
 const hudCharImg = document.getElementById("hud-char-img");
@@ -205,10 +207,31 @@ function enterGame(roomCode, isHost) {
   hudAbilityName.textContent = `Special: ${cfg.ability}`;
 
   updatePlayerChips();
+  engine.resize();
   engine.start();
 
   // Periodic HUD update
   setInterval(updateHUD, 80);
+}
+
+// Fullscreen Toggle
+if (fullscreenBtn) {
+  fullscreenBtn.addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  });
+
+  document.addEventListener("fullscreenchange", () => {
+    if (document.fullscreenElement) {
+      fullscreenBtn.textContent = "✕";
+    } else {
+      fullscreenBtn.textContent = "⛶";
+    }
+    engine.resize();
+  });
 }
 
 copyRoomBtn.addEventListener("click", () => {
@@ -245,11 +268,18 @@ network.onPlayerLeft = (p) => {
 function updateHUD() {
   const p = engine.myPlayer;
   statHp.textContent = Math.round(p.hp);
-  statAmmo.textContent = p.isReloading ? "RELOADING..." : p.ammo;
+  statAmmo.textContent = p.isReloading ? "RELOAD" : p.ammo;
   statMaxAmmo.textContent = p.maxAmmo;
   statWave.textContent = engine.wave;
   statEnemies.textContent = engine.zombies.length + engine.spawnQueue.length;
   statScore.textContent = engine.teamScore;
+
+  // HP Bar fill width
+  if (hudHpFill) {
+    const hpRatio = Math.max(0, Math.min(100, (p.hp / p.maxHp) * 100));
+    hudHpFill.style.width = `${hpRatio}%`;
+    hudHpFill.style.background = hpRatio > 50 ? "linear-gradient(90deg, #10b981, #22c55e)" : hpRatio > 25 ? "#f59e0b" : "#ef4444";
+  }
 
   // Ability Button Cooldown Visualizer
   if (p.abilityCooldownTimer > 0) {

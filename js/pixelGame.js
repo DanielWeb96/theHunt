@@ -11,9 +11,9 @@ export class PixelGameEngine {
     this.ctx = canvas.getContext("2d");
     this.network = network;
 
-    // Viewport & camera
-    this.width = canvas.width;
-    this.height = canvas.height;
+    // Viewport & camera (Dynamic Fullscreen)
+    this.resize();
+    window.addEventListener("resize", () => this.resize());
     this.camera = { x: CONFIG.WORLD.WIDTH / 2, y: CONFIG.WORLD.HEIGHT / 2 };
 
     // World state
@@ -78,6 +78,11 @@ export class PixelGameEngine {
     this.setupNetworkHooks();
   }
 
+  resize() {
+    this.width = this.canvas.width = window.innerWidth;
+    this.height = this.canvas.height = window.innerHeight;
+  }
+
   // --------------------------------------------------------------------------
   // INPUT HANDLING
   // --------------------------------------------------------------------------
@@ -102,12 +107,8 @@ export class PixelGameEngine {
     });
 
     this.canvas.addEventListener("mousemove", (e) => {
-      const rect = this.canvas.getBoundingClientRect();
-      const scaleX = this.canvas.width / rect.width;
-      const scaleY = this.canvas.height / rect.height;
-
-      this.mouse.screenX = (e.clientX - rect.left) * scaleX;
-      this.mouse.screenY = (e.clientY - rect.top) * scaleY;
+      this.mouse.screenX = e.clientX;
+      this.mouse.screenY = e.clientY;
       this.mouse.worldX = this.mouse.screenX + this.camera.x - this.width / 2;
       this.mouse.worldY = this.mouse.screenY + this.camera.y - this.height / 2;
     });
@@ -702,8 +703,16 @@ export class PixelGameEngine {
     // Clamp camera within map bounds
     const halfW = this.width / 2;
     const halfH = this.height / 2;
-    this.camera.x = Math.max(halfW, Math.min(this.worldWidth - halfW, this.camera.x));
-    this.camera.y = Math.max(halfH, Math.min(this.worldHeight - halfH, this.camera.y));
+    if (this.width >= this.worldWidth) {
+      this.camera.x = this.worldWidth / 2;
+    } else {
+      this.camera.x = Math.max(halfW, Math.min(this.worldWidth - halfW, this.camera.x));
+    }
+    if (this.height >= this.worldHeight) {
+      this.camera.y = this.worldHeight / 2;
+    } else {
+      this.camera.y = Math.max(halfH, Math.min(this.worldHeight - halfH, this.camera.y));
+    }
   }
 
   broadcastState() {
@@ -1079,10 +1088,10 @@ export class PixelGameEngine {
   }
 
   renderMinimap(ctx) {
-    const miniSize = 130;
-    const pad = 14;
+    const miniSize = 135;
+    const pad = 16;
     const miniX = this.width - miniSize - pad;
-    const miniY = pad;
+    const miniY = 96; // below the top-right score and session box
 
     // Minimap Background
     ctx.save();
